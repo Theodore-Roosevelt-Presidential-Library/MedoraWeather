@@ -148,30 +148,48 @@ export function badgeSvg(data, { bare = false } = {}) {
 }
 
 // ------------------------------------------------------------------ Current
-function metricText(x, y, k, v) {
-  return `<text x="${x}" y="${y}" font-family="${FONTS.sans}" font-size="15"><tspan fill="${ROLE.textMuted}">${esc(k)} </tspan><tspan fill="${ROLE.text}">${esc(v)}</tspan></text>`;
+// Compass arrow (centered at origin, pointing "up"=north), rotate to bearing.
+function windArrowG(x, y, deg, color) {
+  if (deg == null) return '';
+  return `<g transform="translate(${x},${y}) rotate(${deg})"><path d="M0 7 L0 -7 M-4.5 -1.5 L0 -7 L4.5 -1.5" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 }
+const chevUp = (x, y, color) => `<path d="M${x - 3} ${y + 2} L${x} ${y - 2} L${x + 3} ${y + 2}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+const chevDown = (x, y, color) => `<path d="M${x - 3} ${y - 2} L${x} ${y + 2} L${x + 3} ${y - 2}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+const approxW = (s, px = 8) => String(s).length * px;
 
 export function currentSvg(data) {
   const w = 520, c = data.current, off = alertOffset(data);
 
-  // Build the metric rows (feels-like, wind, humidity, sunrise/sunset).
+  // Build the metric rows (feels-like, wind, humidity, and a combined Sun).
   const metrics = [];
-  if (c.feelsLike != null && Math.abs(c.feelsLike - c.temp) >= 1) metrics.push(['Feels like', c.feelsLike + '°']);
+  if (c.feelsLike != null && Math.abs(c.feelsLike - c.temp) >= 1) metrics.push({ k: 'Feels like', v: c.feelsLike + '°' });
   if (c.wind && c.wind.speed != null) {
-    let wv = (c.wind.dir ? c.wind.dir + ' ' : '') + c.wind.speed + ' mph';
-    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ', gusts ' + c.wind.gust;
-    metrics.push(['Wind', wv]);
+    let wv = c.wind.speed + ' mph';
+    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ' G' + c.wind.gust;
+    metrics.push({ k: 'Wind', v: wv, deg: c.wind.deg });
   }
-  if (c.humidity != null) metrics.push(['Humidity', c.humidity + '%']);
-  if (data.sun && data.sun.riseLabel) metrics.push(['Sunrise', data.sun.riseLabel]);
-  if (data.sun && data.sun.setLabel) metrics.push(['Sunset', data.sun.setLabel]);
+  if (c.humidity != null) metrics.push({ k: 'Humidity', v: c.humidity + '%' });
+  if (data.sun && (data.sun.riseLabel || data.sun.setLabel)) {
+    metrics.push({ k: 'Sun', v: data.sun.riseLabel, v2: data.sun.setLabel, sun: true });
+  }
 
+  const colX = [40, 290], startY = 306, rowH = 46;
   let mrows = '';
-  metrics.forEach((m, i) => {
-    mrows += metricText(i % 2 === 0 ? 40 : 290, 314 + Math.floor(i / 2) * 30, m[0], m[1]);
+  metrics.forEach((mt, i) => {
+    const cx = colX[i % 2], top = startY + Math.floor(i / 2) * rowH, vy = top + 22;
+    mrows += `<text x="${cx}" y="${top}" font-family="${FONTS.sans}" font-size="11" letter-spacing="0.5" fill="${ROLE.textMuted}">${esc(mt.k.toUpperCase())}</text>`;
+    if (mt.deg != null) {
+      mrows += windArrowG(cx + 7, vy - 5, mt.deg, ROLE.text) +
+        `<text x="${cx + 18}" y="${vy}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.text}">${esc(mt.v)}</text>`;
+    } else if (mt.sun) {
+      mrows += chevUp(cx + 3, vy - 5, ROLE.text) + `<text x="${cx + 12}" y="${vy}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.text}">${esc(mt.v)}</text>`;
+      const setX = cx + 12 + approxW(mt.v) + 14;
+      mrows += chevDown(setX, vy - 5, ROLE.text) + `<text x="${setX + 9}" y="${vy}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.text}">${esc(mt.v2)}</text>`;
+    } else {
+      mrows += `<text x="${cx}" y="${vy}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.text}">${esc(mt.v)}</text>`;
+    }
   });
-  let y = 314 + Math.ceil(metrics.length / 2) * 30 - 12;
+  let y = startY + Math.ceil(metrics.length / 2) * rowH - 16;
 
   // Air quality: dot + number/category, a 6-band scale, and a plain-language line.
   let aqi = '';

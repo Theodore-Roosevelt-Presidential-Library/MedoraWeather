@@ -67,10 +67,11 @@ function injectFontsOnce() {
     ".mw-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;border:2px solid " + ROLE.bg + ";}" +
     ".mw-alert{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid " + ROLE.hairline + ";border-left-width:4px;background:transparent;text-decoration:none;color:" + ROLE.text + ";margin-bottom:12px;max-width:100%;}" +
     ".mw-alert:hover{background:" + ROLE.panel + ";}" +
-    ".mw-metrics{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:14px;}" +
-    ".mw-metric{display:flex;flex-direction:column;gap:1px;}" +
+    ".mw-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:12px 16px;margin-top:14px;}" +
+    ".mw-metric{display:flex;flex-direction:column;gap:1px;min-width:0;}" +
     ".mw-mk{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:" + ROLE.textMuted + ";}" +
-    ".mw-mv{font-size:15px;color:" + ROLE.text + ";}" +
+    ".mw-mv{font-size:15px;color:" + ROLE.text + ";white-space:nowrap;}" +
+    ".mw-windarrow{display:inline-block;vertical-align:-2px;margin-right:1px;}" +
     ".mw-aqi{margin-top:14px;}" +
     ".mw-aqi-h{display:flex;align-items:center;gap:8px;font-size:14px;color:" + ROLE.text + ";}" +
     ".mw-aqi-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}" +
@@ -165,20 +166,28 @@ function renderHourly(data, hours, showRain) {
   return html + '</div>';
 }
 
-function metric(k, v) {
-  return '<div class="mw-metric"><span class="mw-mk">' + k + '</span><span class="mw-mv">' + v + '</span></div>';
+function metric(k, v, title) {
+  return '<div class="mw-metric"><span class="mw-mk">' + k + '</span><span class="mw-mv"' + (title ? ' title="' + esc(title) + '"' : '') + '>' + v + '</span></div>';
+}
+// Compass arrow pointing toward the direction the wind blows FROM (vane-style),
+// so it lines up with the cardinal it replaces.
+function windArrow(deg) {
+  if (deg == null) return '';
+  return '<svg class="mw-windarrow" width="13" height="13" viewBox="0 0 24 24" style="transform:rotate(' + deg + 'deg)" aria-hidden="true">' +
+    '<path d="M12 20 L12 4 M6 10 L12 4 L18 10" fill="none" stroke="' + ROLE.text + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 function renderMetrics(data) {
   var c = data.current, m = '';
   if (c.feelsLike != null && Math.abs(c.feelsLike - c.temp) >= 1) m += metric('Feels like', c.feelsLike + '°');
   if (c.wind && c.wind.speed != null) {
-    var wv = (c.wind.dir ? c.wind.dir + ' ' : '') + c.wind.speed + ' mph';
-    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ', gusts ' + c.wind.gust;
-    m += metric('Wind', wv);
+    var wv = windArrow(c.wind.deg) + c.wind.speed + ' mph';
+    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ' G' + c.wind.gust;
+    m += metric('Wind', wv, c.wind.dir ? 'From the ' + c.wind.dir : '');
   }
   if (c.humidity != null) m += metric('Humidity', c.humidity + '%');
-  if (data.sun && data.sun.riseLabel) m += metric('Sunrise', data.sun.riseLabel);
-  if (data.sun && data.sun.setLabel) m += metric('Sunset', data.sun.setLabel);
+  if (data.sun && (data.sun.riseLabel || data.sun.setLabel)) {
+    m += metric('Sun', '&#8593;&nbsp;' + esc(data.sun.riseLabel) + '&nbsp;&nbsp;&#8595;&nbsp;' + esc(data.sun.setLabel));
+  }
   return m ? '<div class="mw-metrics">' + m + '</div>' : '';
 }
 // Air quality: a colored dot + number/category, a 6-band scale showing where it

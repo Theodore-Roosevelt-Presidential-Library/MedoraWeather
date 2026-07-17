@@ -241,10 +241,12 @@ export async function fetchWeather(config) {
   const nowMs = Date.now();
   const feelsLike = cToF(gridValueAt(gp.apparentTemperature, nowMs));
   const rh = gridValueAt(gp.relativeHumidity, nowMs);
+  const windDeg = gridValueAt(gp.windDirection, nowMs);
   const wind = {
     speed: kmhToMph(gridValueAt(gp.windSpeed, nowMs)),
     gust: kmhToMph(gridValueAt(gp.windGust, nowMs)),
-    dir: degToCardinal(gridValueAt(gp.windDirection, nowMs))
+    dir: degToCardinal(windDeg),
+    deg: windDeg == null ? null : Math.round(windDeg)
   };
 
   // ---- Sunrise/sunset (local calc) + air quality (best-effort).
