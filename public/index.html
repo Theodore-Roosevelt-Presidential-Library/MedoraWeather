@@ -181,8 +181,10 @@
       <tr><td><code>data-title</code></td><td><code>true</code> / <code>false</code></td><td><code>true</code></td><td>Show the "Medora, North Dakota" heading.</td></tr>
       <tr><td><code>data-view</code></td><td><code>mini</code> / <code>current</code> / <code>hourly</code> / <code>days</code></td><td>—</td><td>Force a single view. <code>mini</code> is the icon + temperature badge. Overrides <code>data-days</code>/<code>data-hours</code>.</td></tr>
       <tr><td><code>data-link</code></td><td>URL / <code>true</code> / <code>false</code></td><td>mini only</td><td>Wrap the widget in a link. The <code>mini</code> badge links to the full forecast page by default; set a URL to override, or <code>false</code> to disable. Add <code>data-link="true"</code> to link any other view.</td></tr>
+      <tr><td><code>data-refresh</code></td><td>minutes</td><td><code>15</code></td><td>Auto-refresh interval. The widget re-checks for fresh data on this cadence (and when a hidden tab returns), so a page left open stays current. Set <code>0</code> to disable.</td></tr>
     </tbody>
   </table>
+  <p class="fine">Widgets update themselves — a page left open refreshes automatically as new hourly data publishes, no reload needed.</p>
 
   <h2 id="images">Static images</h2>
   <p>Prefer a plain image — for email, print signage, a CMS that blocks scripts, or a social post? Hotlink any of these PNGs. They refresh hourly at the same URL, so the link never goes stale.</p>

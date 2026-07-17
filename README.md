@@ -33,6 +33,7 @@ Options (all optional):
 | `data-title` | `true`  | Show the "Medora, North Dakota" heading |
 | `data-view`  | —       | Force a single view: `mini`, `current`, `hourly`, or `days` |
 | `data-link`  | mini only | Wrap the widget in a link. `mini` links to the full forecast page by default; pass a URL to override, or `false` to disable. Use `data-link="true"` to link any other view. |
+| `data-refresh` | `15`  | Auto-refresh interval in minutes. The widget re-checks for fresh data on this cadence (and when a hidden tab becomes visible again), so a page left open stays current. `0` disables it. |
 
 You can combine them — e.g. `data-days="5" data-hours="12"` shows a five-day
 overview above a twelve-hour strip. For multiple widgets on one page, add

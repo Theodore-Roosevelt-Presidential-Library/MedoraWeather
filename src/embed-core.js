@@ -188,7 +188,7 @@ function targets() {
   if (SCRIPT && (SCRIPT.hasAttribute('data-days') || SCRIPT.hasAttribute('data-view') ||
       SCRIPT.hasAttribute('data-hours') || SCRIPT.hasAttribute('data-medora-weather'))) {
     var host = document.createElement('div');
-    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title', 'data-link'].forEach(function (a) {
+    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title', 'data-link', 'data-refresh'].forEach(function (a) {
       if (SCRIPT.hasAttribute(a)) host.setAttribute(a, SCRIPT.getAttribute(a));
     });
     SCRIPT.parentNode.insertBefore(host, SCRIPT.nextSibling);
@@ -198,32 +198,74 @@ function targets() {
 }
 
 var DATA_PROMISE = null;
-function getData() {
-  if (!DATA_PROMISE) {
-    DATA_PROMISE = fetch(BASE + '/data/forecast.json')
-      .then(function (r) { if (!r.ok) throw new Error('fetch failed'); return r.json(); });
+var MANAGED = [];        // elements we keep in sync
+var TIMER = null;
+var LAST_FETCH = 0;
+
+// How often to re-check for fresh data. Data is cached hourly upstream, so a
+// 15-minute poll keeps a long-open page current without hammering the CDN.
+// Override with data-refresh (minutes) on the script tag; 0 disables.
+function refreshMinutes() {
+  var v = SCRIPT && SCRIPT.getAttribute && SCRIPT.getAttribute('data-refresh');
+  var n = v == null ? NaN : parseFloat(v);
+  return isNaN(n) ? 15 : n;
+}
+
+function getData(force) {
+  if (force || !DATA_PROMISE) {
+    // cache:'no-cache' -> conditional request; the CDN answers 304 when the
+    // hourly file is unchanged, so refreshes are nearly free.
+    DATA_PROMISE = fetch(BASE + '/data/forecast.json', force ? { cache: 'no-cache' } : {})
+      .then(function (r) { if (!r.ok) throw new Error('fetch failed'); LAST_FETCH = Date.now(); return r.json(); });
   }
   return DATA_PROMISE;
 }
 function fail(el) { el.className = (el.className ? el.className + ' ' : '') + 'mw-root'; el.innerHTML = '<div class="mw-err">Weather unavailable right now.</div>'; }
 
+function track(el) { if (MANAGED.indexOf(el) === -1) MANAGED.push(el); }
+
 function renderOne(el) {
   injectFontsOnce();
+  track(el);
   getData().then(function (data) { try { renderInto(el, data); } catch (e) { fail(el); } }).catch(function () { fail(el); });
+  scheduleRefresh();
+}
+
+// Re-fetch and re-render every managed element still on the page. Keeps the
+// old content on a failed fetch rather than blanking the widget.
+function refreshAll() {
+  MANAGED = MANAGED.filter(function (el) { return el && (el.isConnected == null || el.isConnected); });
+  if (!MANAGED.length) return;
+  getData(true)
+    .then(function (data) { MANAGED.forEach(function (el) { try { renderInto(el, data); } catch (e) {} }); })
+    .catch(function () {});
+}
+
+function scheduleRefresh() {
+  var mins = refreshMinutes();
+  if (!mins || mins <= 0 || TIMER) return;
+  TIMER = setInterval(refreshAll, mins * 60 * 1000);
+  // Also catch up when a backgrounded tab comes back after the interval.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && Date.now() - LAST_FETCH > mins * 60 * 1000) refreshAll();
+  });
 }
 
 function start() {
   var els = targets();
   if (!els.length) return;
   injectFontsOnce();
+  els.forEach(track);
   getData()
     .then(function (data) { els.forEach(function (el) { try { renderInto(el, data); } catch (e) { fail(el); } }); })
     .catch(function () { els.forEach(fail); });
+  scheduleRefresh();
 }
 
 // Public hook for dynamic pages (e.g. the demo/config generator).
 window.MedoraWeather = {
   render: renderOne,
+  refresh: function () { refreshAll(); },
   reload: function () { DATA_PROMISE = null; start(); }
 };
 

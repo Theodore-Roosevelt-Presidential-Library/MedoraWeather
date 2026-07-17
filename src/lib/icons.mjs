@@ -4,8 +4,7 @@ import { ROLE } from './brand.mjs';
 
 const R = ROLE;
 
-function cloud(fill, cx = 54, cy = 58, s = 1) {
-  const t = (x, y) => `${cx + (x - 54) * s},${cy + (y - 58) * s}`;
+function cloud(fill, cx = 50, cy = 58, s = 1) {
   return `<g fill="${fill}">
     <circle cx="${cx + (-16) * s}" cy="${cy + 2 * s}" r="${16 * s}"/>
     <circle cx="${cx + 2 * s}" cy="${cy + (-6) * s}" r="${21 * s}"/>
@@ -35,28 +34,29 @@ function moon(cx = 50, cy = 46, r = 18) {
 
 function drops(color, y0 = 78) {
   const d = (x, y) => `<line x1="${x}" y1="${y}" x2="${x - 4}" y2="${y + 11}" stroke="${color}" stroke-width="4.5" stroke-linecap="round"/>`;
-  return `${d(40, y0)}${d(54, y0 + 4)}${d(68, y0)}`;
+  return `${d(38, y0)}${d(52, y0 + 4)}${d(66, y0)}`;
 }
 
 function flakes(color, y0 = 80) {
   const f = (x, y) => `<circle cx="${x}" cy="${y}" r="3.4" fill="${color}"/>`;
-  return `${f(40, y0)}${f(54, y0 + 6)}${f(68, y0)}${f(54, y0 - 6)}`;
+  return `${f(36, y0)}${f(50, y0 + 6)}${f(64, y0)}${f(50, y0 - 6)}`;
 }
 
-// id -> inner SVG markup (100x100 space)
+// id -> inner SVG markup (100x100 space). Compositions are balanced around
+// x=50 so the icon sits visually centered under centered labels/temps.
 export const ICON_BUILDERS = {
   sunny: () => sun(50, 48, 20),
   'clear-night': () => moon(50, 48, 20),
-  'partly-sunny': () => `${sun(38, 38, 14)}${cloud(R.cloud, 58, 62, 0.95)}`,
-  'partly-cloudy-night': () => `${moon(38, 38, 14)}${cloud(R.cloud, 58, 62, 0.95)}`,
-  cloudy: () => `${cloud(R.cloudDark, 44, 46, 0.8)}${cloud(R.cloud, 58, 60, 1)}`,
-  rain: () => `${cloud(R.cloudDark, 54, 50, 1)}${drops(R.rainDrop)}`,
-  showers: () => `${cloud(R.cloudDark, 54, 48, 1)}${drops(R.rainDrop, 74)}${drops(R.rainDrop, 84)}`,
-  thunderstorm: () => `${cloud(R.cloudDark, 54, 48, 1)}<polygon points="52,70 44,86 51,86 46,98 64,80 55,80 60,70" fill="${R.storm}" stroke="${R.sunEdge}" stroke-width="1.5"/>`,
-  snow: () => `${cloud(R.cloudDark, 54, 50, 1)}${flakes(R.snow)}`,
-  sleet: () => `${cloud(R.cloudDark, 54, 50, 1)}${drops(R.rainDrop, 78)}${flakes(R.snow, 84)}`,
-  fog: () => `${cloud(R.cloud, 54, 44, 0.95)}<g stroke="${R.fog}" stroke-width="5" stroke-linecap="round"><line x1="30" y1="72" x2="74" y2="72"/><line x1="34" y1="84" x2="70" y2="84"/></g>`,
-  wind: () => `<g fill="none" stroke="${R.cloudDark}" stroke-width="5" stroke-linecap="round"><path d="M22 42 h40 a8 8 0 1 0 -8 -8"/><path d="M22 58 h52 a8 8 0 1 1 -8 8"/><path d="M22 74 h30 a7 7 0 1 1 -7 7"/></g>`
+  'partly-sunny': () => `${sun(40, 36, 13)}${cloud(R.cloud, 53, 60, 0.9)}`,
+  'partly-cloudy-night': () => `${moon(40, 36, 14)}${cloud(R.cloud, 53, 60, 0.9)}`,
+  cloudy: () => `${cloud(R.cloudDark, 43, 47, 0.7)}${cloud(R.cloud, 50, 57, 0.98)}`,
+  rain: () => `${cloud(R.cloudDark, 50, 50, 1)}${drops(R.rainDrop)}`,
+  showers: () => `${cloud(R.cloudDark, 50, 48, 1)}${drops(R.rainDrop, 74)}${drops(R.rainDrop, 84)}`,
+  thunderstorm: () => `${cloud(R.cloudDark, 50, 48, 1)}<polygon points="48,70 40,86 47,86 42,98 60,80 51,80 56,70" fill="${R.storm}" stroke="${R.sunEdge}" stroke-width="1.5"/>`,
+  snow: () => `${cloud(R.cloudDark, 50, 50, 1)}${flakes(R.snow)}`,
+  sleet: () => `${cloud(R.cloudDark, 50, 50, 1)}${drops(R.rainDrop, 78)}${flakes(R.snow, 84)}`,
+  fog: () => `${cloud(R.cloud, 50, 44, 0.95)}<g stroke="${R.fog}" stroke-width="5" stroke-linecap="round"><line x1="28" y1="72" x2="72" y2="72"/><line x1="32" y1="84" x2="68" y2="84"/></g>`,
+  wind: () => `<g fill="none" stroke="${R.cloudDark}" stroke-width="5" stroke-linecap="round"><path d="M20 42 h40 a8 8 0 1 0 -8 -8"/><path d="M20 58 h52 a8 8 0 1 1 -8 8"/><path d="M20 74 h30 a7 7 0 1 1 -7 7"/></g>`
 };
 
 // Return a full standalone <svg> string.
