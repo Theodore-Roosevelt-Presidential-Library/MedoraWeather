@@ -86,15 +86,23 @@ if (!skipImages) {
   }
 }
 
-// ---- 5. Demo page + assets from public/
+// ---- 5. Demo page + assets from public/ (templating __BASE__ in .html files)
 if (fs.existsSync(p('public'))) {
   for (const f of fs.readdirSync(p('public'))) {
     const src = p('public', f);
-    if (fs.statSync(src).isFile()) fs.copyFileSync(src, path.join(SITE, f));
+    if (!fs.statSync(src).isFile()) continue;
+    if (/\.html$/i.test(f)) {
+      const html = fs.readFileSync(src, 'utf8').replaceAll('__BASE__', config.site.baseUrl);
+      fs.writeFileSync(path.join(SITE, f), html);
+    } else {
+      fs.copyFileSync(src, path.join(SITE, f));
+    }
   }
 }
 // .nojekyll so GitHub Pages serves /fonts and dotfiles untouched
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
+// CNAME for the GitHub Pages custom domain (Actions-artifact deploys need it in the artifact)
+if (config.site.customDomain) fs.writeFileSync(path.join(SITE, 'CNAME'), config.site.customDomain + '\n');
 fs.writeFileSync(path.join(SITE, 'data', 'meta.json'), JSON.stringify({
   generatedAt: data.generatedAt, location: data.location, refreshMinutes: config.cache.refreshMinutes
 }, null, 2));

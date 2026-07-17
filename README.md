@@ -7,7 +7,7 @@ Data comes from the National Weather Service and is cached hourly by a GitHub Ac
 ## What it produces
 
 Everything is generated into `site/` and published to GitHub Pages at
-`https://theodore-roosevelt-presidential-library.github.io/MedoraWeather/`.
+`https://weather.labs.trlibrary.com/`.
 
 - `embed.js` — the zero-dependency widget (one `<script>` tag, `data-*` options)
 - `data/forecast.json` — the cached, normalized forecast
@@ -19,7 +19,7 @@ Everything is generated into `site/` and published to GitHub Pages at
 Drop one line where the widget should appear:
 
 ```html
-<script src="https://theodore-roosevelt-presidential-library.github.io/MedoraWeather/embed.js"
+<script src="https://weather.labs.trlibrary.com/embed.js"
         data-days="3" data-rain="true"></script>
 ```
 
@@ -43,7 +43,7 @@ overview above a twelve-hour strip. For multiple widgets on one page, add
 Hotlink any PNG; it refreshes hourly at the same URL:
 
 ```html
-<img src="https://theodore-roosevelt-presidential-library.github.io/MedoraWeather/images/forecast-3day.png"
+<img src="https://weather.labs.trlibrary.com/images/forecast-3day.png"
      alt="3-day forecast for Medora, ND">
 ```
 

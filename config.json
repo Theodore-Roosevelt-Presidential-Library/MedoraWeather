@@ -8,7 +8,8 @@
     "timezone": "America/Denver"
   },
   "site": {
-    "baseUrl": "https://theodore-roosevelt-presidential-library.github.io/MedoraWeather",
+    "baseUrl": "https://weather.labs.trlibrary.com",
+    "customDomain": "weather.labs.trlibrary.com",
     "contactEmail": "mkbriney@gmail.com",
     "userAgent": "MedoraWeather/1.0 (Theodore Roosevelt Presidential Library; mkbriney@gmail.com)"
   },
