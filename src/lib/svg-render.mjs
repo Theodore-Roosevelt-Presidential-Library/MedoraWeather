@@ -87,16 +87,19 @@ export function hourlyStripSvg(data, { hours = 12 } = {}) {
 
 // ------------------------------------------------------------------ Current
 export function currentSvg(data) {
-  const w = 480, h = 300, c = data.current;
+  const w = 480, h = 330, c = data.current;
+  // Icon box sits in the upper band (y 96–216). Condition + meta live below
+  // y=240 so low-hanging icons (rain drops, lightning) never touch the text.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Current conditions in Medora, North Dakota">
     ${frame(w, h)}
     ${title(40, 56, 'Medora, North Dakota', 30)}
     ${updated(40, 78, data)}
-    ${icon(c.icon, 36, 104, 128)}
-    <text x="182" y="188" font-family="${DISPLAY}" font-weight="700" font-size="104" fill="${ROLE.text}">${c.temp}&#176;</text>
-    <text x="40" y="236" font-family="${SERIF}" font-size="24" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
-    <text x="40" y="268" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}</text>
-    ${c.rainChance ? `${miniDrop(292, 259, ROLE.rainDrop)}<text x="308" y="268" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.rainDrop}">${c.rainChance}% chance of rain</text>` : ''}
+    ${icon(c.icon, 34, 96, 120)}
+    <text x="176" y="194" font-family="${DISPLAY}" font-weight="700" font-size="104" fill="${ROLE.text}">${c.temp}&#176;</text>
+    <line x1="40" y1="238" x2="${w - 40}" y2="238" stroke="${ROLE.hairline}" stroke-width="1"/>
+    <text x="40" y="278" font-family="${SERIF}" font-size="26" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
+    <text x="40" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}</text>
+    ${c.rainChance ? `${miniDrop(w - 188, 299, ROLE.rainDrop)}<text x="${w - 172}" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.rainDrop}">${c.rainChance}% chance of rain</text>` : ''}
   </svg>`;
 }
 
