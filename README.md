@@ -11,7 +11,7 @@ Everything is generated into `site/` and published to GitHub Pages at
 
 - `embed.js` — the zero-dependency widget (one `<script>` tag, `data-*` options)
 - `data/forecast.json` — the cached, normalized forecast
-- `images/*.png` — static images: `badge` (icon + temp + place), `badge-bare` (icon + temp only), `current`, `forecast-3day`, `forecast-5day`, `forecast-7day`, `hourly`, `social` (each also emitted as `.svg`)
+- `images/*.png` — static images: `badge` (icon + temp + place), `badge-bare` (icon + temp only), `current`, `forecast-3day`, `forecast-5day`, `forecast-7day`, `hourly`, `alert` (active alerts / all-clear), `social` (each also emitted as `.svg`)
 - `index.html` — a demo page with a live preview and an embed-code generator
 
 ## Embedding the widget
@@ -31,14 +31,27 @@ Options (all optional):
 | `data-hours` | `0`     | Number of hourly columns with condition icons (0 hides the strip) |
 | `data-rain`  | `true`  | Show chance of rain |
 | `data-title` | `true`  | Show the "Medora, North Dakota" heading |
-| `data-view`  | —       | Force a single view: `mini`, `current`, `hourly`, or `days` |
-| `data-link`  | mini only | Wrap the widget in a link. `mini` links to the full forecast page by default; pass a URL to override, or `false` to disable. Use `data-link="true"` to link any other view. |
+| `data-view`  | —       | Force a single view: `mini`, `current`, `hourly`, `days`, or `alerts` |
+| `data-link`  | on      | Every embed links to the full forecast page by default. Pass a URL to override the destination, or `false` to make it non-clickable. |
+| `data-alerts`| `true`  | Show the active-alert banner at the top when NWS has an alert for Medora. `false` hides it. |
 | `data-refresh` | `15`  | Auto-refresh interval in minutes. The widget re-checks for fresh data on this cadence (and when a hidden tab becomes visible again), so a page left open stays current. `0` disables it. |
 
 You can combine them — e.g. `data-days="5" data-hours="12"` shows a five-day
 overview above a twelve-hour strip. For multiple widgets on one page, add
 `<div data-medora-weather data-view="current"></div>` containers and include
 `embed.js` once.
+
+Active weather alerts (Heat Advisory, Red Flag Warning, Winter Storm Warning,
+etc.) come from the NWS `/alerts/active` endpoint for Medora's point. When one is
+in effect, every widget view shows a colored banner across the top (severity-tinted),
+the `mini` badge shows a small colored dot, and the `current`/daily images gain a
+banner. The `alerts` view and `alert.png` show the full detail — event, timing, and
+safety instructions — with a calm "no active alerts" state otherwise.
+
+Snowfall appears automatically on the daily cards and hourly strip whenever the
+forecast calls for accumulation — a snowflake with the expected inches — and is
+hidden otherwise. The amount comes from the NWS gridpoint `snowfallAmount` field
+(one extra API call per hourly build), summed per day/hour and converted to inches.
 
 The `mini` view is a compact icon + temperature badge that links through to
 `trlibrary.com/weather/` (configurable via `config.json` → `site.fullForecastUrl`):

@@ -49,6 +49,7 @@ function injectFontsOnce() {
     ".mw-lo{font-family:" + SERIF + ";font-size:17px;color:" + ROLE.textMuted + ";}" +
     ".mw-cond{font-size:12px;color:" + ROLE.textMuted + ";margin-top:3px;min-height:15px;}" +
     ".mw-rain{font-size:12px;color:" + ROLE.rainDrop + ";margin-top:3px;display:flex;gap:3px;align-items:center;justify-content:center;}" +
+    ".mw-snow{font-size:12px;color:" + ROLE.rainDrop + ";margin-top:2px;display:flex;gap:3px;align-items:center;justify-content:center;}" +
     ".mw-strip{display:flex;gap:2px;margin-top:16px;overflow-x:auto;}" +
     ".mw-hour{flex:0 0 auto;width:64px;text-align:center;padding:4px 2px;}" +
     ".mw-hlabel{font-size:12px;color:" + ROLE.textMuted + ";}" +
@@ -60,9 +61,24 @@ function injectFontsOnce() {
     ".mw-ico{display:block;margin:6px auto;}" +
     ".mw-link{text-decoration:none;color:inherit;display:inline-block;max-width:100%;cursor:pointer;transition:opacity .15s;}" +
     ".mw-link:hover{opacity:.72;}" +
-    ".mw-mini{display:inline-flex;align-items:center;gap:8px;background:" + ROLE.bg +
+    ".mw-mini{position:relative;display:inline-flex;align-items:center;gap:8px;background:" + ROLE.bg +
       ";font-family:" + FONTS.sans.replace(/"/g, "'") + ";line-height:1;}" +
     ".mw-mini svg{display:block;flex:0 0 auto;}" +
+    ".mw-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;border:2px solid " + ROLE.bg + ";}" +
+    ".mw-alert{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid " + ROLE.hairline + ";border-left-width:4px;background:" + ROLE.bg + ";text-decoration:none;color:" + ROLE.text + ";margin-bottom:12px;max-width:100%;}" +
+    ".mw-alert:hover{background:" + ROLE.panel + ";}" +
+    ".mw-alert-ev{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:15px;letter-spacing:.3px;color:" + ROLE.text + ";}" +
+    ".mw-alert-tm{font-size:12px;color:" + ROLE.textMuted + ";}" +
+    ".mw-alert-more{margin-left:auto;font-size:12px;color:" + ROLE.textMuted + ";white-space:nowrap;}" +
+    ".mw-alert-ico{flex:0 0 auto;line-height:0;}" +
+    ".mw-al{border:1px solid " + ROLE.hairline + ";border-left-width:4px;padding:12px 14px;margin-bottom:10px;}" +
+    ".mw-al-ev{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:18px;letter-spacing:.3px;color:" + ROLE.text + ";display:flex;align-items:center;gap:8px;}" +
+    ".mw-al-hl{font-family:" + SERIF + ";font-size:15px;color:" + ROLE.text + ";margin-top:4px;}" +
+    ".mw-al-tm{font-size:12px;color:" + ROLE.textMuted + ";margin-top:4px;}" +
+    ".mw-al-inst{font-size:13px;color:" + ROLE.text + ";margin-top:8px;line-height:1.5;}" +
+    ".mw-allclear{display:flex;align-items:center;gap:12px;padding:14px 4px;}" +
+    ".mw-ac-t{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:18px;color:" + ROLE.text + ";}" +
+    ".mw-ac-s{font-size:13px;color:" + ROLE.textMuted + ";margin-top:2px;}" +
     ".mw-mtemp{font-family:" + DISPLAY + ";font-weight:700;font-size:26px;color:" + ROLE.text + ";}" +
     ".mw-mloc{font-size:12px;color:" + ROLE.textMuted + ";letter-spacing:.3px;text-transform:uppercase;font-family:" + DISPLAY + ";}" +
     ".mw-err{font-size:13px;color:" + ROLE.textMuted + ";}";
@@ -84,6 +100,24 @@ function rainLine(pct, showRain) {
   return '<div class="mw-rain">' + drop(12) + '<span>' + pct + '%</span></div>';
 }
 
+function flake(size) {
+  var s = '', cx = size / 2, r = size * 0.42;
+  for (var i = 0; i < 3; i++) {
+    var a = (i * Math.PI) / 3, dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+    s += '<line x1="' + (cx - dx).toFixed(1) + '" y1="' + (cx - dy).toFixed(1) + '" x2="' + (cx + dx).toFixed(1) + '" y2="' + (cx + dy).toFixed(1) + '"/>';
+  }
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="display:inline-block;vertical-align:-1px" aria-hidden="true"><g stroke="' + ROLE.rainDrop + '" stroke-width="1.4" stroke-linecap="round">' + s + '</g></svg>';
+}
+
+function snowStr(inches) {
+  return (inches % 1 === 0 ? String(inches) : inches.toFixed(1)) + ' in';
+}
+
+function snowLine(inches, showRain) {
+  if (!showRain || !(inches > 0)) return '';
+  return '<div class="mw-snow">' + flake(12) + '<span>' + snowStr(inches) + '</span></div>';
+}
+
 function esc(s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
 
 function renderDays(data, days, showRain) {
@@ -97,6 +131,7 @@ function renderDays(data, days, showRain) {
       '<div class="mw-lo">' + (d.low != null ? d.low : '–') + '°</div>' +
       '<div class="mw-cond">' + esc(d.label || d.condition || '') + '</div>' +
       rainLine(d.rainChance, showRain) +
+      snowLine(d.snowfall, showRain) +
       '</div>';
   });
   return html + '</div>';
@@ -111,6 +146,7 @@ function renderHourly(data, hours, showRain) {
       '<div class="mw-ico">' + iconSvg(h.icon, 40) + '</div>' +
       '<div class="mw-htemp">' + h.temp + '°</div>' +
       (showRain && h.rainChance ? '<div class="mw-rain">' + h.rainChance + '%</div>' : '') +
+      snowLine(h.snowfall, showRain) +
       '</div>';
   });
   return html + '</div>';
@@ -128,21 +164,62 @@ function renderCurrent(data, showRain) {
       (showRain && c.rainChance ? ' · ' + c.rainChance + '% rain' : '') + '</div>';
 }
 
+function triSvg(color, size) {
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" style="display:inline-block;vertical-align:-3px" aria-hidden="true">' + alertTriangle(color) + '</svg>';
+}
+function checkSvg(size) {
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-4px" aria-hidden="true"><path d="M20 6 L9 17 L4 12" fill="none" stroke="' + ROLE.good + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
 function renderMini(data, showTitle) {
   var c = data.current;
-  return '<span class="mw-mini">' + iconSvg(c.icon, 30) +
+  var al = data.alerts || [];
+  var dot = al.length ? '<span class="mw-dot" style="background:' + alertColor(al[0].severity) + '"></span>' : '';
+  return '<span class="mw-mini">' + dot + iconSvg(c.icon, 30) +
     '<span class="mw-mtemp">' + c.temp + '°</span>' +
     (showTitle ? '<span class="mw-mloc">' + esc(data.location.name) + '</span>' : '') +
     '</span>';
 }
 
-// Resolve the click-through URL. Mini badge links by default; other views only
-// link when data-link is set. data-link="false" disables; "true"/"" uses default.
-function resolveLink(el, isMini) {
+// Slim alert banner for the top of full views (links to the forecast page).
+function renderAlertBanner(data) {
+  var al = data.alerts || [];
+  if (!al.length) return '';
+  var a = al[0], col = alertColor(a.severity);
+  var more = al.length > 1 ? '<span class="mw-alert-more">+' + (al.length - 1) + ' more</span>' : '';
+  var tm = a.endsLabel ? ' <span class="mw-alert-tm">until ' + esc(a.endsLabel) + '</span>' : '';
+  return '<a class="mw-alert" style="border-left-color:' + col + '" href="' + esc(MW_DEFAULT_LINK) + '">' +
+    '<span class="mw-alert-ico">' + triSvg(col, 22) + '</span>' +
+    '<span><span class="mw-alert-ev">' + esc(a.event) + '</span>' + tm + '</span>' + more + '</a>';
+}
+
+// Detailed alerts view (data-view="alerts") with an all-clear fallback.
+function renderAlerts(data) {
+  var al = data.alerts || [];
+  if (!al.length) {
+    return '<div class="mw-allclear">' + checkSvg(24) +
+      '<div><div class="mw-ac-t">No active weather alerts</div>' +
+      '<div class="mw-ac-s">' + esc(data.location.name + ', ' + data.location.region) + ' · updated ' + esc(data.updatedLabel) + '</div></div></div>';
+  }
+  var html = '';
+  al.forEach(function (a) {
+    var col = alertColor(a.severity);
+    html += '<div class="mw-al" style="border-left-color:' + col + '">' +
+      '<div class="mw-al-ev">' + triSvg(col, 20) + '<span>' + esc(a.event) + '</span></div>' +
+      (a.headline ? '<div class="mw-al-hl">' + esc(a.headline) + '</div>' : '') +
+      (a.endsLabel ? '<div class="mw-al-tm">In effect until ' + esc(a.endsLabel) + '</div>' : '') +
+      (a.instruction ? '<div class="mw-al-inst">' + esc(a.instruction) + '</div>' : '') +
+      '</div>';
+  });
+  return html;
+}
+
+// Resolve the click-through URL. Every forecast view links to the full
+// forecast page by default; data-link="false" disables, a URL overrides.
+function resolveLink(el) {
   var v = el.getAttribute('data-link');
-  if (v === null) return isMini ? MW_DEFAULT_LINK : null;
+  if (v === null || v === '' || /^(true|1|yes|on)$/i.test(v)) return MW_DEFAULT_LINK;
   if (/^(false|0|no|off)$/i.test(v)) return null;
-  if (v === '' || /^(true|1|yes|on)$/i.test(v)) return MW_DEFAULT_LINK;
   return v;
 }
 
@@ -151,15 +228,26 @@ function renderInto(el, data) {
   var hours = intAttr(el.getAttribute('data-hours'), 0);
   var showRain = boolAttr(el.getAttribute('data-rain'), true);
   var showTitle = boolAttr(el.getAttribute('data-title'), true);
+  var showAlerts = boolAttr(el.getAttribute('data-alerts'), true);
   var view = (el.getAttribute('data-view') || '').toLowerCase();
   var isMini = view === 'mini' || view === 'badge';
-  var link = resolveLink(el, isMini);
+  var link = resolveLink(el);
 
-  // Mini badge: compact, no card wrapper.
+  // Mini badge: compact, no card wrapper. Alert shows as a colored dot.
   if (isMini) {
     el.className = (el.className ? el.className + ' ' : '') + 'mw-wrap';
     var mini = renderMini(data, showTitle);
     el.innerHTML = link ? '<a class="mw-link" href="' + esc(link) + '">' + mini + '</a>' : mini;
+    return;
+  }
+
+  // Dedicated alerts detail view (not link-wrapped; it is the detail).
+  if (view === 'alerts' || view === 'alert') {
+    var ahead = showTitle
+      ? '<div class="mw-title">Weather alerts</div><div class="mw-sub">' + esc(data.location.name + ', ' + data.location.region) + '</div>'
+      : '';
+    el.className = (el.className ? el.className + ' ' : '') + 'mw-root';
+    el.innerHTML = ahead + renderAlerts(data);
     return;
   }
 
@@ -178,8 +266,11 @@ function renderInto(el, data) {
     ? '<div class="mw-title">' + esc(data.location.name + ', ' + data.location.region) + '</div>' +
       '<div class="mw-sub">Updated ' + esc(data.updatedLabel) + ' · weather.gov</div>'
     : '';
+  // Alert banner is a sibling of the link wrap (never nest anchors).
+  var banner = showAlerts ? renderAlertBanner(data) : '';
+  var inner = link ? '<a class="mw-link" href="' + esc(link) + '">' + head + body + '</a>' : head + body;
   el.className = (el.className ? el.className + ' ' : '') + 'mw-root';
-  el.innerHTML = link ? '<a class="mw-link" href="' + esc(link) + '">' + head + body + '</a>' : head + body;
+  el.innerHTML = banner + inner;
 }
 
 function targets() {
@@ -188,7 +279,7 @@ function targets() {
   if (SCRIPT && (SCRIPT.hasAttribute('data-days') || SCRIPT.hasAttribute('data-view') ||
       SCRIPT.hasAttribute('data-hours') || SCRIPT.hasAttribute('data-medora-weather'))) {
     var host = document.createElement('div');
-    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title', 'data-link', 'data-refresh'].forEach(function (a) {
+    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title', 'data-link', 'data-refresh', 'data-alerts'].forEach(function (a) {
       if (SCRIPT.hasAttribute(a)) host.setAttribute(a, SCRIPT.getAttribute(a));
     });
     SCRIPT.parentNode.insertBefore(host, SCRIPT.nextSibling);

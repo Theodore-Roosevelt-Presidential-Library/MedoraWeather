@@ -1,6 +1,6 @@
 // Weather icons drawn in a 100x100 coordinate space. Shared by the browser
 // widget and the server-side image renderer so there is one source of truth.
-import { ROLE } from './brand.mjs';
+import { ROLE, COLORS } from './brand.mjs';
 
 const R = ROLE;
 
@@ -47,8 +47,8 @@ function flakes(color, y0 = 80) {
 export const ICON_BUILDERS = {
   sunny: () => sun(50, 48, 20),
   'clear-night': () => moon(50, 48, 20),
-  'partly-sunny': () => `${sun(40, 36, 13)}${cloud(R.cloud, 53, 60, 0.9)}`,
-  'partly-cloudy-night': () => `${moon(40, 36, 14)}${cloud(R.cloud, 53, 60, 0.9)}`,
+  'partly-sunny': () => `${sun(43, 36, 13)}${cloud(R.cloud, 54, 60, 0.9)}`,
+  'partly-cloudy-night': () => `${moon(41, 36, 14)}${cloud(R.cloud, 50, 58, 0.9)}`,
   cloudy: () => `${cloud(R.cloudDark, 43, 47, 0.7)}${cloud(R.cloud, 50, 57, 0.98)}`,
   rain: () => `${cloud(R.cloudDark, 50, 50, 1)}${drops(R.rainDrop)}`,
   showers: () => `${cloud(R.cloudDark, 50, 48, 1)}${drops(R.rainDrop, 74)}${drops(R.rainDrop, 84)}`,
@@ -101,4 +101,26 @@ const LABELS = {
 };
 export function shortLabel(iconId) {
   return LABELS[iconId] || 'Mixed';
+}
+
+// Rank + accent color for alert severity (used for the warning triangle and
+// the left accent bar; banner text stays Dark Gray for readability on white).
+export function severityRank(sev) {
+  return { extreme: 4, severe: 3, moderate: 2, minor: 1 }[(sev || '').toLowerCase()] || 0;
+}
+export function alertColor(sev) {
+  switch ((sev || '').toLowerCase()) {
+    case 'extreme':
+    case 'severe': return COLORS.sunsetPink;
+    case 'moderate': return COLORS.sunsetOrange;
+    case 'minor': return COLORS.sunsetYellow;
+    default: return COLORS.sunsetOrange;
+  }
+}
+
+// Warning-triangle icon (100x100 space) filled with the given color.
+export function alertTriangle(color) {
+  return `<path d="M50 14 L90 84 L10 84 Z" fill="${color}" stroke="none"/>` +
+    `<rect x="46" y="40" width="8" height="24" rx="4" fill="#25282A"/>` +
+    `<circle cx="50" cy="74" r="4.5" fill="#25282A"/>`;
 }

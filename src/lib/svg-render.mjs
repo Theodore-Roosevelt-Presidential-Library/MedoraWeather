@@ -2,7 +2,7 @@
 // family names ('Dharma Gothic E' display caps, 'Clearface Std' serif); the
 // image generator loads those OTF files into resvg so they render everywhere.
 import { ROLE, COLORS, FONTS } from './brand.mjs';
-import { iconInner } from './icons.mjs';
+import { iconInner, alertColor, alertTriangle } from './icons.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const DISPLAY = "'Dharma Gothic E'";
@@ -23,8 +23,45 @@ function rainTag(cx, y, pct) {
     <text x="${cx - 6}" y="${y + 2}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.rainDrop}" text-anchor="start">${pct}%</text>`;
 }
 
+function snowLabel(inches) {
+  return (Number.isInteger(inches) ? String(inches) : inches.toFixed(1)) + ' in';
+}
+
+function miniFlake(cx, cy, color, r = 6) {
+  let s = '';
+  for (let i = 0; i < 3; i++) {
+    const a = (i * Math.PI) / 3;
+    const dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+    s += `<line x1="${(cx - dx).toFixed(1)}" y1="${(cy - dy).toFixed(1)}" x2="${(cx + dx).toFixed(1)}" y2="${(cy + dy).toFixed(1)}"/>`;
+  }
+  return `<g stroke="${color}" stroke-width="1.6" stroke-linecap="round">${s}</g>`;
+}
+
+// Centered "flake N in" around cx.
+function snowTag(cx, y, inches, size = 15) {
+  if (!inches) return '';
+  return `${miniFlake(cx - 26, y - 5, ROLE.rainDrop)}
+    <text x="${cx - 16}" y="${y + 2}" font-family="${FONTS.sans}" font-size="${size}" fill="${ROLE.rainDrop}" text-anchor="start">${snowLabel(inches)}</text>`;
+}
+
 function frame(w, h) {
   return `<rect x="0" y="0" width="${w}" height="${h}" fill="${ROLE.bg}"/>`;
+}
+
+const BANNER_H = 48;
+// A slim alert banner drawn at the very top: colored left bar, warning
+// triangle, event name (Dark Gray), and end time. Content below is offset.
+function alertBanner(w, a, padX) {
+  const col = alertColor(a.severity);
+  return `
+    <rect x="0" y="0" width="6" height="${BANNER_H}" fill="${col}"/>
+    <svg x="${padX}" y="11" width="26" height="26" viewBox="0 0 100 100">${alertTriangle(col)}</svg>
+    <text x="${padX + 38}" y="31" font-family="${DISPLAY}" font-weight="700" font-size="19" letter-spacing="0.4" fill="${ROLE.text}">${esc((a.event || '').toUpperCase())}</text>
+    ${a.endsLabel ? `<text x="${w - padX}" y="31" font-family="${FONTS.sans}" font-size="14" fill="${ROLE.textMuted}" text-anchor="end">until ${esc(a.endsLabel)}</text>` : ''}
+    <line x1="0" y1="${BANNER_H}" x2="${w}" y2="${BANNER_H}" stroke="${ROLE.hairline}" stroke-width="1"/>`;
+}
+function alertOffset(data) {
+  return (data.alerts && data.alerts.length) ? BANNER_H : 0;
 }
 
 function title(x, y, text, size = 34, color = ROLE.text, anchor = 'start') {
@@ -41,7 +78,10 @@ export function dayCardSvg(data, { days = 3 } = {}) {
   const list = data.days.slice(0, days);
   const col = 190, padX = 48, padTop = 108;
   const w = padX * 2 + col * list.length;
-  const h = 360;
+  const hasSnow = list.some((d) => d.snowfall > 0);
+  const contentH = hasSnow ? 394 : 360;
+  const off = alertOffset(data);
+  const h = contentH + off;
   let cols = '';
   list.forEach((d, i) => {
     const cx = padX + col * i + col / 2;
@@ -51,14 +91,18 @@ export function dayCardSvg(data, { days = 3 } = {}) {
       <text x="${cx}" y="${padTop + 158}" font-family="${DISPLAY}" font-weight="700" font-size="52" fill="${ROLE.text}" text-anchor="middle">${d.high != null ? d.high : '–'}&#176;</text>
       <text x="${cx}" y="${padTop + 186}" font-family="${SERIF}" font-size="22" fill="${ROLE.textMuted}" text-anchor="middle">${d.low != null ? d.low : '–'}&#176;</text>
       <text x="${cx}" y="${padTop + 214}" font-family="${FONTS.sans}" font-size="14" fill="${ROLE.textMuted}" text-anchor="middle">${esc(d.label || '')}</text>
-      ${rainTag(cx, padTop + 242, d.rainChance)}`;
-    if (i > 0) cols += `<line x1="${padX + col * i}" y1="${padTop}" x2="${padX + col * i}" y2="${h - 40}" stroke="${ROLE.hairline}" stroke-width="1"/>`;
+      ${rainTag(cx, padTop + 242, d.rainChance)}
+      ${snowTag(cx, padTop + 270, d.snowfall)}`;
+    if (i > 0) cols += `<line x1="${padX + col * i}" y1="${padTop}" x2="${padX + col * i}" y2="${contentH - 40}" stroke="${ROLE.hairline}" stroke-width="1"/>`;
   });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${days}-day forecast for Medora, North Dakota">
     ${frame(w, h)}
-    ${title(padX, 58, 'Medora, North Dakota', 36)}
-    ${updated(padX, 82, data)}
-    ${cols}
+    ${off ? alertBanner(w, data.alerts[0], padX) : ''}
+    <g transform="translate(0,${off})">
+      ${title(padX, 58, 'Medora, North Dakota', 36)}
+      ${updated(padX, 82, data)}
+      ${cols}
+    </g>
   </svg>`;
 }
 
@@ -67,7 +111,8 @@ export function hourlyStripSvg(data, { hours = 12 } = {}) {
   const list = data.hourly.slice(0, hours);
   const col = 78, padX = 40, padTop = 96;
   const w = padX * 2 + col * list.length;
-  const h = 250;
+  const hasSnow = list.some((hn) => hn.snowfall > 0);
+  const h = hasSnow ? 276 : 250;
   let cols = '';
   list.forEach((hn, i) => {
     const cx = padX + col * i + col / 2;
@@ -75,7 +120,8 @@ export function hourlyStripSvg(data, { hours = 12 } = {}) {
       <text x="${cx}" y="${padTop}" font-family="${FONTS.sans}" font-size="14" fill="${ROLE.textMuted}" text-anchor="middle">${esc(hn.label)}</text>
       ${icon(hn.icon, cx - 22, padTop + 8, 44)}
       <text x="${cx}" y="${padTop + 82}" font-family="${DISPLAY}" font-weight="700" font-size="30" fill="${ROLE.text}" text-anchor="middle">${hn.temp}&#176;</text>
-      ${hn.rainChance ? `<text x="${cx}" y="${padTop + 104}" font-family="${FONTS.sans}" font-size="13" fill="${ROLE.rainDrop}" text-anchor="middle">${hn.rainChance}%</text>` : ''}`;
+      ${hn.rainChance ? `<text x="${cx}" y="${padTop + 104}" font-family="${FONTS.sans}" font-size="13" fill="${ROLE.rainDrop}" text-anchor="middle">${hn.rainChance}%</text>` : ''}
+      ${hn.snowfall > 0 ? `${miniFlake(cx - 22, padTop + 118, ROLE.rainDrop, 5)}<text x="${cx - 13}" y="${padTop + 122}" font-family="${FONTS.sans}" font-size="12" fill="${ROLE.rainDrop}" text-anchor="start">${snowLabel(hn.snowfall)}</text>` : ''}`;
   });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Hourly forecast for Medora, North Dakota">
     ${frame(w, h)}
@@ -102,19 +148,71 @@ export function badgeSvg(data, { bare = false } = {}) {
 
 // ------------------------------------------------------------------ Current
 export function currentSvg(data) {
-  const w = 480, h = 330, c = data.current;
+  const w = 480, c = data.current;
+  const off = alertOffset(data);
+  const h = 330 + off;
   // Icon box sits in the upper band (y 96–216). Condition + meta live below
   // y=240 so low-hanging icons (rain drops, lightning) never touch the text.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Current conditions in Medora, North Dakota">
     ${frame(w, h)}
-    ${title(40, 56, 'Medora, North Dakota', 30)}
-    ${updated(40, 78, data)}
-    ${icon(c.icon, 34, 96, 120)}
-    <text x="176" y="194" font-family="${DISPLAY}" font-weight="700" font-size="104" fill="${ROLE.text}">${c.temp}&#176;</text>
-    <line x1="40" y1="238" x2="${w - 40}" y2="238" stroke="${ROLE.hairline}" stroke-width="1"/>
-    <text x="40" y="278" font-family="${SERIF}" font-size="26" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
-    <text x="40" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}</text>
-    ${c.rainChance ? `${miniDrop(w - 188, 299, ROLE.rainDrop)}<text x="${w - 172}" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.rainDrop}">${c.rainChance}% chance of rain</text>` : ''}
+    ${off ? alertBanner(w, data.alerts[0], 40) : ''}
+    <g transform="translate(0,${off})">
+      ${title(40, 56, 'Medora, North Dakota', 30)}
+      ${updated(40, 78, data)}
+      ${icon(c.icon, 34, 96, 120)}
+      <text x="176" y="194" font-family="${DISPLAY}" font-weight="700" font-size="104" fill="${ROLE.text}">${c.temp}&#176;</text>
+      <line x1="40" y1="238" x2="${w - 40}" y2="238" stroke="${ROLE.hairline}" stroke-width="1"/>
+      <text x="40" y="278" font-family="${SERIF}" font-size="26" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
+      <text x="40" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}</text>
+      ${c.rainChance ? `${miniDrop(w - 188, 299, ROLE.rainDrop)}<text x="${w - 172}" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.rainDrop}">${c.rainChance}% chance of rain</text>` : ''}
+    </g>
+  </svg>`;
+}
+
+// ----------------------------------------------------------- Alerts image
+function wrapText(text, x, y, maxChars, lineH, family, size, fill) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (const wd of words) {
+    if ((cur + ' ' + wd).trim().length > maxChars) { if (cur) lines.push(cur); cur = wd; }
+    else cur = (cur ? cur + ' ' : '') + wd;
+  }
+  if (cur) lines.push(cur);
+  const tspans = lines.map((ln, i) => `<tspan x="${x}" dy="${i === 0 ? 0 : lineH}">${esc(ln)}</tspan>`).join('');
+  return { svg: `<text x="${x}" y="${y}" font-family="${family}" font-size="${size}" fill="${fill}">${tspans}</text>`, lines: lines.length };
+}
+
+export function alertsSvg(data) {
+  const w = 700, padX = 40;
+  const al = data.alerts || [];
+  if (!al.length) {
+    const h = 172;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="No active weather alerts for Medora">
+      ${frame(w, h)}
+      ${title(padX, 62, 'Weather alerts · Medora', 30)}
+      <svg x="${padX}" y="94" width="28" height="28" viewBox="0 0 24 24"><path d="M20 6 L9 17 L4 12" fill="none" stroke="${ROLE.good}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <text x="${padX + 42}" y="116" font-family="${DISPLAY}" font-weight="700" font-size="22" letter-spacing="0.4" fill="${ROLE.text}">NO ACTIVE WEATHER ALERTS</text>
+      <text x="${padX + 42}" y="140" font-family="${FONTS.sans}" font-size="14" fill="${ROLE.textMuted}">${esc(data.location.name + ', ' + data.location.region)} · updated ${esc(data.updatedLabel)}</text>
+    </svg>`;
+  }
+  let y = 100, body = '';
+  for (const a of al.slice(0, 3)) {
+    const col = alertColor(a.severity);
+    const top = y;
+    body += `<svg x="${padX + 12}" y="${y - 4}" width="22" height="22" viewBox="0 0 100 100">${alertTriangle(col)}</svg>`;
+    body += `<text x="${padX + 42}" y="${y + 14}" font-family="${DISPLAY}" font-weight="700" font-size="20" letter-spacing="0.4" fill="${ROLE.text}">${esc((a.event || '').toUpperCase())}</text>`;
+    let yy = y + 40;
+    if (a.headline) { const wt = wrapText(a.headline, padX + 12, yy, 84, 20, SERIF, 15, ROLE.text); body += wt.svg; yy += (wt.lines - 1) * 20 + 24; }
+    if (a.endsLabel) { body += `<text x="${padX + 12}" y="${yy}" font-family="${FONTS.sans}" font-size="13" fill="${ROLE.textMuted}">In effect until ${esc(a.endsLabel)}</text>`; yy += 22; }
+    body += `<rect x="${padX}" y="${top - 6}" width="4" height="${yy - top}" fill="${col}"/>`;
+    y = yy + 22;
+  }
+  const h = y + 6;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Active weather alerts for Medora">
+    ${frame(w, h)}
+    ${title(padX, 62, 'Weather alerts · Medora', 30)}
+    ${body}
   </svg>`;
 }
 
@@ -146,5 +244,5 @@ export function ogSvg(data, { days = 3 } = {}) {
   </svg>`;
 }
 
-export const RENDERERS = { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, ogSvg };
+export const RENDERERS = { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, alertsSvg, ogSvg };
 export { COLORS };

@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchWeather } from '../src/lib/weather.mjs';
-import { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, ogSvg } from '../src/lib/svg-render.mjs';
+import { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, alertsSvg, ogSvg } from '../src/lib/svg-render.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -80,6 +80,7 @@ if (!skipImages) {
     ['current.png', currentSvg(data)],
     ['badge.png', badgeSvg(data)],
     ['badge-bare.png', badgeSvg(data, { bare: true })],
+    ['alert.png', alertsSvg(data)],
     ['social.png', ogSvg(data, { days: 3 })]
   ];
   for (const [name, svg] of jobs) {

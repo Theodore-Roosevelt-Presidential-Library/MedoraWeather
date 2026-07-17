@@ -2,3 +2,5 @@ node_modules/
 site/
 *.log
 .DS_Store
+_snowtest.mjs
+_alerttest.mjs
