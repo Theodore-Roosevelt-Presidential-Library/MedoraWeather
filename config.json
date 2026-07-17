@@ -1,0 +1,23 @@
+{
+  "location": {
+    "name": "Medora",
+    "region": "North Dakota",
+    "shortName": "Medora, ND",
+    "latitude": 46.9139,
+    "longitude": -103.5236,
+    "timezone": "America/Denver"
+  },
+  "site": {
+    "baseUrl": "https://theodore-roosevelt-presidential-library.github.io/MedoraWeather",
+    "contactEmail": "mkbriney@gmail.com",
+    "userAgent": "MedoraWeather/1.0 (Theodore Roosevelt Presidential Library; mkbriney@gmail.com)"
+  },
+  "cache": {
+    "refreshMinutes": 60
+  },
+  "defaults": {
+    "days": 3,
+    "hours": 12,
+    "units": "us"
+  }
+}

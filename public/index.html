@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Medora Weather — embed & images</title>
+<meta name="description" content="Embeddable weather widget and auto-updating images for Medora, North Dakota." />
+<style>
+  @font-face{font-family:'Dharma Gothic E';src:url('fonts/DharmaGothicE-Bold.otf') format('opentype');font-weight:700;}
+  @font-face{font-family:'Dharma Gothic E';src:url('fonts/DharmaGothicE-ExBold.otf') format('opentype');font-weight:800;}
+  @font-face{font-family:'ITC Clearface Std';src:url('fonts/ClearfaceStd-Regular.otf') format('opentype');font-weight:400;}
+  @font-face{font-family:'ITC Clearface Std';src:url('fonts/ClearfaceStd-Bold.otf') format('opentype');font-weight:700;}
+  :root{--gray:#25282A;--muted:#6B6E70;--hair:#E7E4DC;--sand:#FBFAF7;--orange:#E7805D;--night:#092A4D;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#fff;color:var(--gray);font-family:'ITC Clearface Std',Georgia,serif;line-height:1.6;}
+  .wrap{max-width:940px;margin:0 auto;padding:40px 24px 80px;}
+  h1{font-family:'Dharma Gothic E',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:1px;font-size:52px;line-height:.95;margin:0 0 6px;}
+  h2{font-family:'Dharma Gothic E',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:26px;margin:48px 0 14px;border-top:1px solid var(--hair);padding-top:24px;}
+  p.lead{font-size:19px;color:var(--muted);margin:0 0 8px;}
+  .grid{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;}
+  label{font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+  select,input[type=number]{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--hair);border-radius:8px;background:#fff;}
+  .controls{display:flex;gap:18px;flex-wrap:wrap;align-items:end;font-family:system-ui,sans-serif;background:var(--sand);border:1px solid var(--hair);border-radius:12px;padding:16px 18px;margin-bottom:16px;}
+  .check{display:flex;align-items:center;gap:8px;}
+  .check input{width:18px;height:18px;}
+  pre{background:var(--night);color:#EAF1FB;padding:16px 18px;border-radius:10px;overflow:auto;font-size:13px;font-family:ui-monospace,Menlo,monospace;line-height:1.5;}
+  code{font-family:ui-monospace,Menlo,monospace;}
+  .imgcard{border:1px solid var(--hair);border-radius:12px;padding:14px;max-width:100%;}
+  .imgcard img{max-width:100%;height:auto;display:block;border-radius:8px;}
+  .imgurl{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);word-break:break-all;margin-top:8px;}
+  a{color:var(--orange);}
+  .foot{margin-top:60px;color:var(--muted);font-size:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Medora Weather</h1>
+  <p class="lead">An embeddable widget and auto-updating images for Medora, North Dakota.</p>
+  <p style="font-size:15px;color:var(--muted)">Data comes from the National Weather Service and is cached hourly, so this page — and every site that embeds it — never overloads the government API.</p>
+
+  <h2>Live widget</h2>
+  <div class="grid">
+    <div data-medora-weather data-days="3" data-rain="true"></div>
+    <div data-medora-weather data-view="current"></div>
+  </div>
+  <div style="margin-top:20px">
+    <div data-medora-weather data-days="0" data-hours="12" data-rain="true"></div>
+  </div>
+
+  <h2>Build your embed code</h2>
+  <div class="controls">
+    <div><label>Multi-day</label><input id="c-days" type="number" min="0" max="7" value="3" /></div>
+    <div><label>Hourly hours</label><input id="c-hours" type="number" min="0" max="24" value="0" /></div>
+    <div class="check"><input id="c-rain" type="checkbox" checked /><label style="margin:0">Chance of rain</label></div>
+    <div class="check"><input id="c-title" type="checkbox" checked /><label style="margin:0">Show title</label></div>
+  </div>
+  <pre id="snippet"></pre>
+  <p style="font-size:14px;color:var(--muted)">Paste that one line where you want the widget to appear. Days set to 0 hides the multi-day row; hours set to 0 hides the hourly strip.</p>
+  <div class="grid" style="margin-top:10px"><div id="preview"></div></div>
+
+  <h2>Static images</h2>
+  <p style="font-size:15px;color:var(--muted)">Hotlink these PNGs anywhere — email, signage, social. They refresh hourly at the same URL.</p>
+  <div class="grid">
+    <div class="imgcard"><img src="images/current.png" alt="Current conditions in Medora" /><div class="imgurl" data-img="images/current.png"></div></div>
+    <div class="imgcard"><img src="images/forecast-3day.png" alt="3-day forecast" /><div class="imgurl" data-img="images/forecast-3day.png"></div></div>
+    <div class="imgcard"><img src="images/hourly.png" alt="Hourly forecast" /><div class="imgurl" data-img="images/hourly.png"></div></div>
+    <div class="imgcard"><img src="images/social.png" alt="Social share image" style="max-width:420px" /><div class="imgurl" data-img="images/social.png"></div></div>
+  </div>
+
+  <p class="foot">Theodore Roosevelt Presidential Library · data © NOAA/NWS · updated hourly via GitHub Actions.</p>
+</div>
+
+<script src="embed.js"></script>
+<script>
+  var BASE = 'https://theodore-roosevelt-presidential-library.github.io/MedoraWeather';
+  document.querySelectorAll('[data-img]').forEach(function(el){ el.textContent = BASE + '/' + el.getAttribute('data-img'); });
+
+  var days = document.getElementById('c-days'), hours = document.getElementById('c-hours'),
+      rain = document.getElementById('c-rain'), title = document.getElementById('c-title'),
+      out = document.getElementById('snippet'), preview = document.getElementById('preview');
+
+  function snippet(){
+    var attrs = ['src="' + BASE + '/embed.js"'];
+    attrs.push('data-days="' + (parseInt(days.value,10)||0) + '"');
+    if ((parseInt(hours.value,10)||0) > 0) attrs.push('data-hours="' + parseInt(hours.value,10) + '"');
+    attrs.push('data-rain="' + (rain.checked ? 'true':'false') + '"');
+    if (!title.checked) attrs.push('data-title="false"');
+    out.textContent = '<script ' + attrs.join('\n        ') + '><\/script>';
+    // live preview using a fresh container (same-origin embed.js already loaded)
+    preview.innerHTML = '';
+    var d = document.createElement('div');
+    d.setAttribute('data-medora-weather','');
+    d.setAttribute('data-days', String(parseInt(days.value,10)||0));
+    if ((parseInt(hours.value,10)||0) > 0) d.setAttribute('data-hours', String(parseInt(hours.value,10)));
+    d.setAttribute('data-rain', rain.checked ? 'true':'false');
+    if (!title.checked) d.setAttribute('data-title','false');
+    preview.appendChild(d);
+    if (window.MedoraWeather) window.MedoraWeather.render(d);
+  }
+  [days,hours,rain,title].forEach(function(el){ el.addEventListener('input', snippet); });
+  snippet();
+</script>
+</body>
+</html>

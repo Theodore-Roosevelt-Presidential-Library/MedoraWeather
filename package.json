@@ -1,0 +1,15 @@
+{
+  "name": "medora-weather",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cached Medora, ND weather: an embeddable widget and auto-generated static images for the Theodore Roosevelt Presidential Library.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "fetch": "node scripts/build.mjs --skip-images",
+    "serve": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}
