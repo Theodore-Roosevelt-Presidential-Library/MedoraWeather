@@ -2,7 +2,7 @@
 
 An embeddable weather **widget** and auto-updating **static images** for Medora, North Dakota, built for the Theodore Roosevelt Presidential Library.
 
-Data comes from the National Weather Service and is cached hourly by a GitHub Action. Only that Action ever calls `api.weather.gov` — the widget and images are served as static files from GitHub Pages, so no amount of visitor traffic touches the government API.
+Data comes from the National Weather Service and is cached and refreshed about every 15 minutes by a GitHub Action. Only that Action ever calls `api.weather.gov` — the widget and images are served as static files from GitHub Pages, so no amount of visitor traffic touches the government API.
 
 ## What it produces
 
@@ -34,7 +34,7 @@ Options (all optional):
 | `data-view`  | —       | Force a single view: `mini`, `current`, `hourly`, `days`, or `alerts` |
 | `data-link`  | on      | Every embed links to the full forecast page by default. Pass a URL to override the destination, or `false` to make it non-clickable. |
 | `data-alerts`| `true`  | Show the active-alert banner at the top when NWS has an alert for Medora. `false` hides it. |
-| `data-refresh` | `15`  | Auto-refresh interval in minutes. The widget re-checks for fresh data on this cadence (and when a hidden tab becomes visible again), so a page left open stays current. `0` disables it. |
+| `data-refresh` | `15`  | Auto-refresh interval in minutes. The widget re-checks for fresh data on this cadence (and when a hidden tab becomes visible again), and automatically polls every 5 minutes while an alert is active. `0` disables it. |
 
 You can combine them — e.g. `data-days="5" data-hours="12"` shows a five-day
 overview above a twelve-hour strip. For multiple widgets on one page, add
@@ -61,7 +61,7 @@ safety instructions — with a calm "no active alerts" state otherwise.
 Snowfall appears automatically on the daily cards and hourly strip whenever the
 forecast calls for accumulation — a snowflake with the expected inches — and is
 hidden otherwise. The amount comes from the NWS gridpoint `snowfallAmount` field
-(one extra API call per hourly build), summed per day/hour and converted to inches.
+(one extra API call per build), summed per day/hour and converted to inches.
 
 The `mini` view is a compact icon + temperature badge that links through to
 `trlibrary.com/weather/` (configurable via `config.json` → `site.fullForecastUrl`):
@@ -72,7 +72,7 @@ The `mini` view is a compact icon + temperature badge that links through to
 
 ## Using the static images
 
-Hotlink any PNG; it refreshes hourly at the same URL:
+Hotlink any PNG; it refreshes at the same URL about every 15 minutes:
 
 ```html
 <img src="https://weather.labs.trlibrary.com/images/forecast-3day.png"
@@ -84,7 +84,7 @@ Hotlink any PNG; it refreshes hourly at the same URL:
 ## How it works
 
 ```
-NWS API ──(hourly, in CI only)──▶ scripts/build.mjs ──▶ site/  ──▶ GitHub Pages CDN ──▶ widgets + images
+NWS API ──(every ~15 min, CI only)──▶ scripts/build.mjs ──▶ site/  ──▶ GitHub Pages CDN ──▶ widgets + images
 ```
 
 `scripts/build.mjs`:
@@ -108,7 +108,7 @@ npm run serve     # preview at http://localhost:8080
 
 ## Deployment
 
-The workflow in `.github/workflows/deploy.yml` runs hourly (and on push /
+The workflow in `.github/workflows/deploy.yml` runs about every 15 minutes (and on push /
 manual trigger), builds `site/`, and deploys it to Pages.
 
 **One-time setup:** in the repo, go to **Settings → Pages → Build and

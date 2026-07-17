@@ -1,9 +1,11 @@
 name: Build and deploy Medora Weather
 
 on:
-  # Refresh the cached forecast every hour, on the hour.
+  # Refresh every ~15 minutes so time-sensitive alerts and fast-changing
+  # Badlands conditions surface quickly. (GitHub may delay scheduled runs a
+  # few minutes under load — this is best-effort, not a life-safety channel.)
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/15 * * * *"
   # Rebuild on pushes to main (code/style changes).
   push:
     branches: [main]

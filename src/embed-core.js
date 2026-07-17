@@ -81,7 +81,10 @@ function injectFontsOnce() {
     ".mw-alert-tm{font-size:12px;color:" + ROLE.textMuted + ";}" +
     ".mw-alert-more{margin-left:auto;font-size:12px;color:" + ROLE.textMuted + ";white-space:nowrap;}" +
     ".mw-alert-ico{flex:0 0 auto;line-height:0;}" +
-    ".mw-al{border:1px solid " + ROLE.hairline + ";border-left-width:4px;padding:12px 14px;margin-bottom:10px;}" +
+    ".mw-al{display:block;text-decoration:none;color:" + ROLE.text + ";border:1px solid " + ROLE.hairline + ";border-left-width:4px;padding:12px 14px;margin-bottom:10px;}" +
+    "a.mw-al:hover{background:" + ROLE.panel + ";}" +
+    ".mw-al-src{display:inline-block;margin-top:4px;font-size:13px;color:" + ROLE.textMuted + ";text-decoration:none;}" +
+    ".mw-al-src:hover{text-decoration:underline;}" +
     ".mw-al-ev{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:18px;letter-spacing:.3px;color:" + ROLE.text + ";display:flex;align-items:center;gap:8px;}" +
     ".mw-al-hl{font-family:" + SERIF + ";font-size:15px;color:" + ROLE.text + ";margin-top:4px;}" +
     ".mw-al-tm{font-size:12px;color:" + ROLE.textMuted + ";margin-top:4px;}" +
@@ -246,16 +249,20 @@ function renderAlerts(data) {
       '<div><div class="mw-ac-t">No active weather alerts</div>' +
       '<div class="mw-ac-s">' + esc(data.location.name + ', ' + data.location.region) + ' · updated ' + esc(data.updatedLabel) + '</div></div></div>';
   }
+  var nws = data.nwsUrl || MW_DEFAULT_LINK;
   var html = '';
   al.forEach(function (a) {
     var col = alertColor(a.severity);
-    html += '<div class="mw-al" style="border-left-color:' + col + '">' +
+    var tag = 'div', open = '', close = '</div>';
+    if (nws) { tag = 'a'; open = ' href="' + esc(nws) + '"'; close = '</a>'; }
+    html += '<' + tag + ' class="mw-al"' + open + ' style="border-left-color:' + col + '">' +
       '<div class="mw-al-ev">' + triSvg(col, 20) + '<span>' + esc(a.event) + '</span></div>' +
       (a.headline ? '<div class="mw-al-hl">' + esc(a.headline) + '</div>' : '') +
       (a.endsLabel ? '<div class="mw-al-tm">In effect until ' + esc(a.endsLabel) + '</div>' : '') +
       (a.instruction ? '<div class="mw-al-inst">' + esc(a.instruction) + '</div>' : '') +
-      '</div>';
+      close;
   });
+  html += '<a class="mw-al-src" href="' + esc(nws) + '">Official details at weather.gov →</a>';
   return html;
 }
 
@@ -336,12 +343,12 @@ function targets() {
 var DATA_PROMISE = null;
 var MANAGED = [];        // elements we keep in sync
 var TIMER = null;
+var TIMER_MINS = null;
+var VIS_BOUND = false;
 var LAST_FETCH = 0;
 
-// How often to re-check for fresh data. Data is cached hourly upstream, so a
-// 15-minute poll keeps a long-open page current without hammering the CDN.
-// Override with data-refresh (minutes) on the script tag; 0 disables.
-function refreshMinutes() {
+// Base cadence from data-refresh (minutes); default 15, 0 disables.
+function baseMinutes() {
   var v = SCRIPT && SCRIPT.getAttribute && SCRIPT.getAttribute('data-refresh');
   var n = v == null ? NaN : parseFloat(v);
   return isNaN(n) ? 15 : n;
@@ -350,7 +357,7 @@ function refreshMinutes() {
 function getData(force) {
   if (force || !DATA_PROMISE) {
     // cache:'no-cache' -> conditional request; the CDN answers 304 when the
-    // hourly file is unchanged, so refreshes are nearly free.
+    // published file is unchanged, so refreshes are nearly free.
     DATA_PROMISE = fetch(BASE + '/data/forecast.json', force ? { cache: 'no-cache' } : {})
       .then(function (r) { if (!r.ok) throw new Error('fetch failed'); LAST_FETCH = Date.now(); return r.json(); });
   }
@@ -360,11 +367,29 @@ function fail(el) { el.className = (el.className ? el.className + ' ' : '') + 'm
 
 function track(el) { if (MANAGED.indexOf(el) === -1) MANAGED.push(el); }
 
+// Adaptive cadence: poll every 5 min while an alert is active, otherwise the
+// base cadence. Re-evaluated after every fetch so it speeds up/slows down
+// as alerts come and go.
+function schedule(data) {
+  var base = baseMinutes();
+  if (!base || base <= 0) { if (TIMER) { clearInterval(TIMER); TIMER = null; TIMER_MINS = null; } return; }
+  var mins = (data && data.alerts && data.alerts.length) ? Math.min(base, 5) : base;
+  if (TIMER && TIMER_MINS === mins) return;
+  if (TIMER) clearInterval(TIMER);
+  TIMER_MINS = mins;
+  TIMER = setInterval(refreshAll, mins * 60 * 1000);
+  if (!VIS_BOUND) {
+    VIS_BOUND = true;
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && Date.now() - LAST_FETCH > (TIMER_MINS || 15) * 60 * 1000) refreshAll();
+    });
+  }
+}
+
 function renderOne(el) {
   injectFontsOnce();
   track(el);
-  getData().then(function (data) { try { renderInto(el, data); } catch (e) { fail(el); } }).catch(function () { fail(el); });
-  scheduleRefresh();
+  getData().then(function (data) { try { renderInto(el, data); } catch (e) { fail(el); } schedule(data); }).catch(function () { fail(el); });
 }
 
 // Re-fetch and re-render every managed element still on the page. Keeps the
@@ -373,18 +398,8 @@ function refreshAll() {
   MANAGED = MANAGED.filter(function (el) { return el && (el.isConnected == null || el.isConnected); });
   if (!MANAGED.length) return;
   getData(true)
-    .then(function (data) { MANAGED.forEach(function (el) { try { renderInto(el, data); } catch (e) {} }); })
+    .then(function (data) { MANAGED.forEach(function (el) { try { renderInto(el, data); } catch (e) {} }); schedule(data); })
     .catch(function () {});
-}
-
-function scheduleRefresh() {
-  var mins = refreshMinutes();
-  if (!mins || mins <= 0 || TIMER) return;
-  TIMER = setInterval(refreshAll, mins * 60 * 1000);
-  // Also catch up when a backgrounded tab comes back after the interval.
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && Date.now() - LAST_FETCH > mins * 60 * 1000) refreshAll();
-  });
 }
 
 function start() {
@@ -393,9 +408,8 @@ function start() {
   injectFontsOnce();
   els.forEach(track);
   getData()
-    .then(function (data) { els.forEach(function (el) { try { renderInto(el, data); } catch (e) { fail(el); } }); })
+    .then(function (data) { els.forEach(function (el) { try { renderInto(el, data); } catch (e) { fail(el); } }); schedule(data); })
     .catch(function () { els.forEach(fail); });
-  scheduleRefresh();
 }
 
 // Public hook for dynamic pages (e.g. the demo/config generator).

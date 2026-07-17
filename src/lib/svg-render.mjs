@@ -248,7 +248,8 @@ export function alertsSvg(data) {
     body += `<rect x="${padX}" y="${top - 6}" width="4" height="${yy - top}" fill="${col}"/>`;
     y = yy + 22;
   }
-  const h = y + 6;
+  body += `<text x="${padX}" y="${y}" font-family="${FONTS.sans}" font-size="13" fill="${ROLE.textMuted}">Official details at weather.gov</text>`;
+  const h = y + 18;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Active weather alerts for Medora">
     ${frame(w, h)}
     ${title(padX, 62, 'Weather alerts · Medora', 30)}

@@ -194,10 +194,10 @@
       <tr><td><code>data-view</code></td><td><code>mini</code> / <code>current</code> / <code>hourly</code> / <code>days</code> / <code>alerts</code></td><td>—</td><td>Force a single view. <code>mini</code> is the icon + temperature badge; <code>alerts</code> shows active weather-alert details. Overrides <code>data-days</code>/<code>data-hours</code>.</td></tr>
       <tr><td><code>data-link</code></td><td>URL / <code>false</code></td><td>on</td><td>Every embed links to the full forecast page by default. Set a URL to override the destination, or <code>false</code> to make it non-clickable.</td></tr>
       <tr><td><code>data-alerts</code></td><td><code>true</code> / <code>false</code></td><td><code>true</code></td><td>Show the active-alert banner at the top of the widget when NWS has an alert for Medora. <code>false</code> hides it.</td></tr>
-      <tr><td><code>data-refresh</code></td><td>minutes</td><td><code>15</code></td><td>Auto-refresh interval. The widget re-checks for fresh data on this cadence (and when a hidden tab returns), so a page left open stays current. Set <code>0</code> to disable.</td></tr>
+      <tr><td><code>data-refresh</code></td><td>minutes</td><td><code>15</code></td><td>Auto-refresh interval. The widget re-checks for fresh data on this cadence (and when a hidden tab returns), and automatically speeds up to every 5 minutes while an alert is active. Set <code>0</code> to disable.</td></tr>
     </tbody>
   </table>
-  <p class="fine">Widgets update themselves — a page left open refreshes automatically as new hourly data publishes, no reload needed.</p>
+  <p class="fine">Widgets update themselves — a page left open refreshes automatically as new data publishes (the source rebuilds about every 15 minutes), no reload needed, and polls faster while a weather alert is active.</p>
   <p class="fine">Snowfall shows automatically: when the forecast calls for accumulation, the daily cards and hourly strip add a snowflake with the expected inches. Nothing appears when no snow is expected, so it stays out of the way spring through fall.</p>
   <p class="fine">The widgets have transparent backgrounds, so they take on your page's background — the static images always render on white. And if the National Weather Service is ever unreachable, the widgets keep showing the last good forecast and quietly note "data delayed" rather than going blank.</p>
 

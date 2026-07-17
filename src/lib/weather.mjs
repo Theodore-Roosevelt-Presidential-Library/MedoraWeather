@@ -288,6 +288,7 @@ export async function fetchWeather(config) {
     }).format(new Date()),
     units: 'F',
     stale: false,
+    nwsUrl: `https://forecast.weather.gov/MapClick.php?lat=${latitude}&lon=${longitude}`,
     current,
     days,
     hourly: hours,
