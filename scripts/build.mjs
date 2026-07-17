@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchWeather } from '../src/lib/weather.mjs';
+import { fetchWeatherWithFallback } from '../src/lib/weather.mjs';
 import { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, alertsSvg, ogSvg } from '../src/lib/svg-render.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,7 +30,8 @@ ensure(path.join(SITE, 'fonts'));
 
 // ---- 1. Weather data
 log('fetching NWS forecast for', config.location.shortName);
-const data = await fetchWeather(config);
+const data = await fetchWeatherWithFallback(config);
+if (data.stale) log('WARNING: NWS unavailable — published last-good data (stale)');
 fs.writeFileSync(path.join(SITE, 'data', 'forecast.json'), JSON.stringify(data));
 fs.writeFileSync(path.join(SITE, 'data', 'forecast.pretty.json'), JSON.stringify(data, null, 2));
 log('current', data.current.temp + '°', data.current.condition, '| days', data.days.length, '| hours', data.hourly.length);

@@ -36,7 +36,7 @@ function injectFontsOnce() {
     "@font-face{font-family:'ITC Clearface Std';src:url('" + BASE + "/fonts/ClearfaceStd-Regular.otf') format('opentype');font-weight:400;font-display:swap;}" +
     "@font-face{font-family:'ITC Clearface Std';src:url('" + BASE + "/fonts/ClearfaceStd-Bold.otf') format('opentype');font-weight:700;font-display:swap;}" +
     ".mw-root *{box-sizing:border-box;margin:0;padding:0;}" +
-    ".mw-root{background:" + ROLE.bg + ";color:" + ROLE.text +
+    ".mw-root{background:transparent;color:" + ROLE.text +
       ";display:inline-block;max-width:100%;font-family:" + FONTS.sans.replace(/"/g, "'") + ";}" +
     ".mw-title{font-family:" + DISPLAY + ";font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:" + ROLE.text + ";font-size:26px;line-height:1;}" +
     ".mw-sub{font-size:12px;color:" + ROLE.textMuted + ";margin-top:6px;}" +
@@ -61,12 +61,22 @@ function injectFontsOnce() {
     ".mw-ico{display:block;margin:6px auto;}" +
     ".mw-link{text-decoration:none;color:inherit;display:inline-block;max-width:100%;cursor:pointer;transition:opacity .15s;}" +
     ".mw-link:hover{opacity:.72;}" +
-    ".mw-mini{position:relative;display:inline-flex;align-items:center;gap:8px;background:" + ROLE.bg +
+    ".mw-mini{position:relative;display:inline-flex;align-items:center;gap:8px;background:transparent" +
       ";font-family:" + FONTS.sans.replace(/"/g, "'") + ";line-height:1;}" +
     ".mw-mini svg{display:block;flex:0 0 auto;}" +
     ".mw-dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;border:2px solid " + ROLE.bg + ";}" +
-    ".mw-alert{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid " + ROLE.hairline + ";border-left-width:4px;background:" + ROLE.bg + ";text-decoration:none;color:" + ROLE.text + ";margin-bottom:12px;max-width:100%;}" +
+    ".mw-alert{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid " + ROLE.hairline + ";border-left-width:4px;background:transparent;text-decoration:none;color:" + ROLE.text + ";margin-bottom:12px;max-width:100%;}" +
     ".mw-alert:hover{background:" + ROLE.panel + ";}" +
+    ".mw-metrics{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:14px;}" +
+    ".mw-metric{display:flex;flex-direction:column;gap:1px;}" +
+    ".mw-mk{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:" + ROLE.textMuted + ";}" +
+    ".mw-mv{font-size:15px;color:" + ROLE.text + ";}" +
+    ".mw-aqi{margin-top:14px;}" +
+    ".mw-aqi-h{display:flex;align-items:center;gap:8px;font-size:14px;color:" + ROLE.text + ";}" +
+    ".mw-aqi-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}" +
+    ".mw-aqi-scale{display:flex;gap:2px;margin-top:6px;max-width:280px;}" +
+    ".mw-aqi-seg{height:6px;flex:1;border-radius:2px;}" +
+    ".mw-aqi-b{font-size:12px;color:" + ROLE.textMuted + ";margin-top:5px;max-width:340px;line-height:1.45;}" +
     ".mw-alert-ev{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:15px;letter-spacing:.3px;color:" + ROLE.text + ";}" +
     ".mw-alert-tm{font-size:12px;color:" + ROLE.textMuted + ";}" +
     ".mw-alert-more{margin-left:auto;font-size:12px;color:" + ROLE.textMuted + ";white-space:nowrap;}" +
@@ -152,6 +162,39 @@ function renderHourly(data, hours, showRain) {
   return html + '</div>';
 }
 
+function metric(k, v) {
+  return '<div class="mw-metric"><span class="mw-mk">' + k + '</span><span class="mw-mv">' + v + '</span></div>';
+}
+function renderMetrics(data) {
+  var c = data.current, m = '';
+  if (c.feelsLike != null && Math.abs(c.feelsLike - c.temp) >= 1) m += metric('Feels like', c.feelsLike + '°');
+  if (c.wind && c.wind.speed != null) {
+    var wv = (c.wind.dir ? c.wind.dir + ' ' : '') + c.wind.speed + ' mph';
+    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ', gusts ' + c.wind.gust;
+    m += metric('Wind', wv);
+  }
+  if (c.humidity != null) m += metric('Humidity', c.humidity + '%');
+  if (data.sun && data.sun.riseLabel) m += metric('Sunrise', data.sun.riseLabel);
+  if (data.sun && data.sun.setLabel) m += metric('Sunset', data.sun.setLabel);
+  return m ? '<div class="mw-metrics">' + m + '</div>' : '';
+}
+// Air quality: a colored dot + number/category, a 6-band scale showing where it
+// sits, and a plain-language line so the number actually means something.
+function renderAqi(data) {
+  var a = data.air;
+  if (!a || a.aqi == null) return '';
+  var segs = '';
+  for (var i = 0; i < AQI_BANDS.length; i++) {
+    var on = i === a.index;
+    segs += '<div class="mw-aqi-seg" style="background:' + AQI_BANDS[i] + ';opacity:' + (on ? '1' : '0.28') + (on ? ';box-shadow:0 0 0 2px ' + AQI_BANDS[i] : '') + '"></div>';
+  }
+  return '<div class="mw-aqi">' +
+    '<div class="mw-aqi-h"><span class="mw-aqi-dot" style="background:' + a.color + '"></span>' +
+    '<span>Air quality <strong>' + a.aqi + '</strong> · ' + esc(a.category) + '</span></div>' +
+    '<div class="mw-aqi-scale">' + segs + '</div>' +
+    '<div class="mw-aqi-b">' + esc(a.blurb) + '</div></div>';
+}
+
 function renderCurrent(data, showRain) {
   var c = data.current;
   return '<div class="mw-now">' +
@@ -161,7 +204,9 @@ function renderCurrent(data, showRain) {
     '<div class="mw-nowcond">' + esc(c.condition || '') + '</div>' +
     '<div class="mw-nowmeta">High ' + (c.high != null ? c.high + '°' : '–') +
       ' · Low ' + (c.low != null ? c.low + '°' : '–') +
-      (showRain && c.rainChance ? ' · ' + c.rainChance + '% rain' : '') + '</div>';
+      (showRain && c.rainChance ? ' · ' + c.rainChance + '% rain' : '') + '</div>' +
+    renderMetrics(data) +
+    renderAqi(data);
 }
 
 function triSvg(color, size) {
@@ -264,7 +309,7 @@ function renderInto(el, data) {
 
   var head = showTitle
     ? '<div class="mw-title">' + esc(data.location.name + ', ' + data.location.region) + '</div>' +
-      '<div class="mw-sub">Updated ' + esc(data.updatedLabel) + ' · weather.gov</div>'
+      '<div class="mw-sub">Updated ' + esc(data.updatedLabel) + ' · weather.gov' + (data.stale ? ' · data delayed' : '') + '</div>'
     : '';
   // Alert banner is a sibling of the link wrap (never nest anchors).
   var banner = showAlerts ? renderAlertBanner(data) : '';

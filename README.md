@@ -41,6 +41,16 @@ overview above a twelve-hour strip. For multiple widgets on one page, add
 `<div data-medora-weather data-view="current"></div>` containers and include
 `embed.js` once.
 
+The current view (widget and `current.png`) also carries feels-like temperature,
+wind + gusts, humidity, sunrise/sunset (computed locally), and air quality. AQI
+is fetched from Open-Meteo (US AQI, no key) and shown with a color scale and a
+plain-language line so the number is understandable, not just a bare number.
+
+The widgets render on a transparent background so they inherit the host page's
+background; the static images always render on white. If the NWS API is ever
+unreachable, the build falls back to the last published forecast, flags it stale,
+and the UI shows a subtle "data delayed" note instead of going blank.
+
 Active weather alerts (Heat Advisory, Red Flag Warning, Winter Storm Warning,
 etc.) come from the NWS `/alerts/active` endpoint for Medora's point. When one is
 in effect, every widget view shows a colored banner across the top (severity-tinted),

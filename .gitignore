@@ -4,3 +4,4 @@ site/
 .DS_Store
 _snowtest.mjs
 _alerttest.mjs
+_failtest.mjs

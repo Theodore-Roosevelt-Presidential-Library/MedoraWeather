@@ -2,7 +2,7 @@
 // family names ('Dharma Gothic E' display caps, 'Clearface Std' serif); the
 // image generator loads those OTF files into resvg so they render everywhere.
 import { ROLE, COLORS, FONTS } from './brand.mjs';
-import { iconInner, alertColor, alertTriangle } from './icons.mjs';
+import { iconInner, alertColor, alertTriangle, AQI_BANDS } from './icons.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const DISPLAY = "'Dharma Gothic E'";
@@ -70,7 +70,8 @@ function title(x, y, text, size = 34, color = ROLE.text, anchor = 'start') {
 }
 
 function updated(x, y, data, anchor = 'start', color = ROLE.textMuted) {
-  return `<text x="${x}" y="${y}" font-family="${FONTS.sans}" font-size="13" fill="${color}" text-anchor="${anchor}">Updated ${esc(data.updatedLabel)} · weather.gov</text>`;
+  const stale = data.stale ? ' · data delayed' : '';
+  return `<text x="${x}" y="${y}" font-family="${FONTS.sans}" font-size="13" fill="${color}" text-anchor="${anchor}">Updated ${esc(data.updatedLabel)} · weather.gov${stale}</text>`;
 }
 
 // ---------------------------------------------------------------- Multi-day
@@ -147,24 +148,63 @@ export function badgeSvg(data, { bare = false } = {}) {
 }
 
 // ------------------------------------------------------------------ Current
+function metricText(x, y, k, v) {
+  return `<text x="${x}" y="${y}" font-family="${FONTS.sans}" font-size="15"><tspan fill="${ROLE.textMuted}">${esc(k)} </tspan><tspan fill="${ROLE.text}">${esc(v)}</tspan></text>`;
+}
+
 export function currentSvg(data) {
-  const w = 480, c = data.current;
-  const off = alertOffset(data);
-  const h = 330 + off;
-  // Icon box sits in the upper band (y 96–216). Condition + meta live below
-  // y=240 so low-hanging icons (rain drops, lightning) never touch the text.
+  const w = 520, c = data.current, off = alertOffset(data);
+
+  // Build the metric rows (feels-like, wind, humidity, sunrise/sunset).
+  const metrics = [];
+  if (c.feelsLike != null && Math.abs(c.feelsLike - c.temp) >= 1) metrics.push(['Feels like', c.feelsLike + '°']);
+  if (c.wind && c.wind.speed != null) {
+    let wv = (c.wind.dir ? c.wind.dir + ' ' : '') + c.wind.speed + ' mph';
+    if (c.wind.gust != null && c.wind.gust >= c.wind.speed + 5) wv += ', gusts ' + c.wind.gust;
+    metrics.push(['Wind', wv]);
+  }
+  if (c.humidity != null) metrics.push(['Humidity', c.humidity + '%']);
+  if (data.sun && data.sun.riseLabel) metrics.push(['Sunrise', data.sun.riseLabel]);
+  if (data.sun && data.sun.setLabel) metrics.push(['Sunset', data.sun.setLabel]);
+
+  let mrows = '';
+  metrics.forEach((m, i) => {
+    mrows += metricText(i % 2 === 0 ? 40 : 290, 314 + Math.floor(i / 2) * 30, m[0], m[1]);
+  });
+  let y = 314 + Math.ceil(metrics.length / 2) * 30 - 12;
+
+  // Air quality: dot + number/category, a 6-band scale, and a plain-language line.
+  let aqi = '';
+  if (data.air && data.air.aqi != null) {
+    const a = data.air, headY = y + 30, segW = 46, gap = 4, x0 = 40, scaleY = headY + 14;
+    let segs = '';
+    for (let i = 0; i < AQI_BANDS.length; i++) {
+      const sx = x0 + i * (segW + gap), on = i === a.index;
+      segs += `<rect x="${sx}" y="${scaleY}" width="${segW}" height="8" rx="3" fill="${AQI_BANDS[i]}" opacity="${on ? 1 : 0.3}"/>`;
+      if (on) segs += `<rect x="${sx - 2}" y="${scaleY - 2}" width="${segW + 4}" height="12" rx="4" fill="none" stroke="${AQI_BANDS[i]}" stroke-width="2"/>`;
+    }
+    const wt = wrapText(a.blurb, 40, scaleY + 34, 76, 18, FONTS.sans, 13, ROLE.textMuted);
+    aqi = `<circle cx="46" cy="${headY - 5}" r="6" fill="${a.color}"/>
+      <text x="60" y="${headY}" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.text}">Air quality <tspan font-weight="700">${a.aqi}</tspan> · ${esc(a.category)}</text>
+      ${segs}${wt.svg}`;
+    y = scaleY + 34 + (wt.lines - 1) * 18;
+  }
+
+  const contentH = Math.max(320, y + 22);
+  const h = contentH + off;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Current conditions in Medora, North Dakota">
     ${frame(w, h)}
     ${off ? alertBanner(w, data.alerts[0], 40) : ''}
     <g transform="translate(0,${off})">
       ${title(40, 56, 'Medora, North Dakota', 30)}
       ${updated(40, 78, data)}
-      ${icon(c.icon, 34, 96, 120)}
-      <text x="176" y="194" font-family="${DISPLAY}" font-weight="700" font-size="104" fill="${ROLE.text}">${c.temp}&#176;</text>
-      <line x1="40" y1="238" x2="${w - 40}" y2="238" stroke="${ROLE.hairline}" stroke-width="1"/>
-      <text x="40" y="278" font-family="${SERIF}" font-size="26" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
-      <text x="40" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}</text>
-      ${c.rainChance ? `${miniDrop(w - 188, 299, ROLE.rainDrop)}<text x="${w - 172}" y="308" font-family="${FONTS.sans}" font-size="16" fill="${ROLE.rainDrop}">${c.rainChance}% chance of rain</text>` : ''}
+      ${icon(c.icon, 32, 92, 104)}
+      <text x="166" y="182" font-family="${DISPLAY}" font-weight="700" font-size="96" fill="${ROLE.text}">${c.temp}&#176;</text>
+      <text x="40" y="234" font-family="${SERIF}" font-size="24" fill="${ROLE.text}">${esc(c.label || c.condition || '')}</text>
+      <text x="40" y="262" font-family="${FONTS.sans}" font-size="15" fill="${ROLE.textMuted}">High ${c.high != null ? c.high + '°' : '–'} · Low ${c.low != null ? c.low + '°' : '–'}${c.rainChance ? ' · ' + c.rainChance + '% rain' : ''}</text>
+      <line x1="40" y1="284" x2="${w - 40}" y2="284" stroke="${ROLE.hairline}" stroke-width="1"/>
+      ${mrows}
+      ${aqi}
     </g>
   </svg>`;
 }

@@ -118,6 +118,9 @@ export function alertColor(sev) {
   }
 }
 
+// AQI band colors (Good → Hazardous), for the little scale visualization.
+export const AQI_BANDS = ['#4E9A51', '#D6A400', '#E8850C', '#D64545', '#8E5BA6', '#7E2B2B'];
+
 // Warning-triangle icon (100x100 space) filled with the given color.
 export function alertTriangle(color) {
   return `<path d="M50 14 L90 84 L10 84 Z" fill="${color}" stroke="none"/>` +
