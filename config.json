@@ -15,7 +15,7 @@
     "userAgent": "MedoraWeather/1.0 (Theodore Roosevelt Presidential Library; mkbriney@gmail.com)"
   },
   "cache": {
-    "refreshMinutes": 60
+    "refreshMinutes": 15
   },
   "defaults": {
     "days": 3,
