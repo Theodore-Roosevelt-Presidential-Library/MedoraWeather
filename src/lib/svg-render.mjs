@@ -85,6 +85,21 @@ export function hourlyStripSvg(data, { hours = 12 } = {}) {
   </svg>`;
 }
 
+// -------------------------------------------------------------- Mini badge
+// Small "icon + temperature" chip. Intended to link to the full forecast.
+export function badgeSvg(data, { bare = false } = {}) {
+  const c = data.current;
+  const w = bare ? 168 : 268, h = 92;
+  const labels = bare ? '' : `
+    <text x="164" y="42" font-family="${DISPLAY}" font-weight="700" font-size="18" letter-spacing="0.5" fill="${ROLE.text}">MEDORA</text>
+    <text x="164" y="62" font-family="${FONTS.sans}" font-size="13" fill="${ROLE.textMuted}">${esc(c.label || '')}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Current temperature in Medora, North Dakota">
+    ${frame(w, h)}
+    ${icon(c.icon, 6, 16, 60)}
+    <text x="76" y="58" font-family="${DISPLAY}" font-weight="700" font-size="46" fill="${ROLE.text}">${c.temp}&#176;</text>${labels}
+  </svg>`;
+}
+
 // ------------------------------------------------------------------ Current
 export function currentSvg(data) {
   const w = 480, h = 330, c = data.current;
@@ -131,5 +146,5 @@ export function ogSvg(data, { days = 3 } = {}) {
   </svg>`;
 }
 
-export const RENDERERS = { dayCardSvg, hourlyStripSvg, currentSvg, ogSvg };
+export const RENDERERS = { dayCardSvg, hourlyStripSvg, currentSvg, badgeSvg, ogSvg };
 export { COLORS };

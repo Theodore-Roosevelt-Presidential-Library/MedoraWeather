@@ -10,6 +10,7 @@
   "site": {
     "baseUrl": "https://weather.labs.trlibrary.com",
     "customDomain": "weather.labs.trlibrary.com",
+    "fullForecastUrl": "https://trlibrary.com/weather/",
     "contactEmail": "mkbriney@gmail.com",
     "userAgent": "MedoraWeather/1.0 (Theodore Roosevelt Presidential Library; mkbriney@gmail.com)"
   },

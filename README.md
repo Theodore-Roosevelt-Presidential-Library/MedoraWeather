@@ -11,7 +11,7 @@ Everything is generated into `site/` and published to GitHub Pages at
 
 - `embed.js` — the zero-dependency widget (one `<script>` tag, `data-*` options)
 - `data/forecast.json` — the cached, normalized forecast
-- `images/*.png` — static images: `current`, `forecast-3day`, `forecast-5day`, `forecast-7day`, `hourly`, `social` (each also emitted as `.svg`)
+- `images/*.png` — static images: `badge` (icon + temp + place), `badge-bare` (icon + temp only), `current`, `forecast-3day`, `forecast-5day`, `forecast-7day`, `hourly`, `social` (each also emitted as `.svg`)
 - `index.html` — a demo page with a live preview and an embed-code generator
 
 ## Embedding the widget
@@ -31,12 +31,20 @@ Options (all optional):
 | `data-hours` | `0`     | Number of hourly columns with condition icons (0 hides the strip) |
 | `data-rain`  | `true`  | Show chance of rain |
 | `data-title` | `true`  | Show the "Medora, North Dakota" heading |
-| `data-view`  | —       | Force a single view: `current`, `hourly`, or `days` |
+| `data-view`  | —       | Force a single view: `mini`, `current`, `hourly`, or `days` |
+| `data-link`  | mini only | Wrap the widget in a link. `mini` links to the full forecast page by default; pass a URL to override, or `false` to disable. Use `data-link="true"` to link any other view. |
 
 You can combine them — e.g. `data-days="5" data-hours="12"` shows a five-day
 overview above a twelve-hour strip. For multiple widgets on one page, add
 `<div data-medora-weather data-view="current"></div>` containers and include
 `embed.js` once.
+
+The `mini` view is a compact icon + temperature badge that links through to
+`trlibrary.com/weather/` (configurable via `config.json` → `site.fullForecastUrl`):
+
+```html
+<script src="https://weather.labs.trlibrary.com/embed.js" data-view="mini"></script>
+```
 
 ## Using the static images
 

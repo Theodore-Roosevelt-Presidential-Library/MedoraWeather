@@ -36,13 +36,13 @@ function injectFontsOnce() {
     "@font-face{font-family:'ITC Clearface Std';src:url('" + BASE + "/fonts/ClearfaceStd-Regular.otf') format('opentype');font-weight:400;font-display:swap;}" +
     "@font-face{font-family:'ITC Clearface Std';src:url('" + BASE + "/fonts/ClearfaceStd-Bold.otf') format('opentype');font-weight:700;font-display:swap;}" +
     ".mw-root *{box-sizing:border-box;margin:0;padding:0;}" +
-    ".mw-root{background:" + ROLE.bg + ";color:" + ROLE.text + ";border:1px solid " + ROLE.hairline +
-      ";border-radius:16px;padding:20px 22px;display:inline-block;max-width:100%;font-family:" + FONTS.sans.replace(/"/g, "'") + ";}" +
+    ".mw-root{background:" + ROLE.bg + ";color:" + ROLE.text +
+      ";display:inline-block;max-width:100%;font-family:" + FONTS.sans.replace(/"/g, "'") + ";}" +
     ".mw-title{font-family:" + DISPLAY + ";font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:" + ROLE.text + ";font-size:26px;line-height:1;}" +
     ".mw-sub{font-size:12px;color:" + ROLE.textMuted + ";margin-top:6px;}" +
     ".mw-row{display:flex;gap:6px;align-items:flex-start;}" +
     ".mw-days{display:flex;gap:4px;margin-top:16px;}" +
-    ".mw-day{flex:1;min-width:78px;text-align:center;padding:6px 8px;border-radius:12px;}" +
+    ".mw-day{flex:1;min-width:78px;text-align:center;padding:6px 8px;}" +
     ".mw-day + .mw-day{border-left:1px solid " + ROLE.hairline + ";}" +
     ".mw-dname{font-family:" + DISPLAY + ";text-transform:uppercase;font-weight:700;font-size:18px;color:" + ROLE.text + ";}" +
     ".mw-hi{font-family:" + DISPLAY + ";font-weight:700;font-size:34px;line-height:1;color:" + ROLE.text + ";}" +
@@ -58,6 +58,13 @@ function injectFontsOnce() {
     ".mw-nowcond{font-family:" + SERIF + ";font-size:20px;color:" + ROLE.text + ";}" +
     ".mw-nowmeta{font-size:14px;color:" + ROLE.textMuted + ";margin-top:4px;}" +
     ".mw-ico{display:block;margin:6px auto;}" +
+    ".mw-link{text-decoration:none;color:inherit;display:inline-block;max-width:100%;cursor:pointer;transition:opacity .15s;}" +
+    ".mw-link:hover{opacity:.72;}" +
+    ".mw-mini{display:inline-flex;align-items:center;gap:8px;background:" + ROLE.bg +
+      ";font-family:" + FONTS.sans.replace(/"/g, "'") + ";line-height:1;}" +
+    ".mw-mini svg{display:block;flex:0 0 auto;}" +
+    ".mw-mtemp{font-family:" + DISPLAY + ";font-weight:700;font-size:26px;color:" + ROLE.text + ";}" +
+    ".mw-mloc{font-size:12px;color:" + ROLE.textMuted + ";letter-spacing:.3px;text-transform:uppercase;font-family:" + DISPLAY + ";}" +
     ".mw-err{font-size:13px;color:" + ROLE.textMuted + ";}";
   var st = document.createElement('style');
   st.id = 'mw-fonts';
@@ -121,12 +128,40 @@ function renderCurrent(data, showRain) {
       (showRain && c.rainChance ? ' · ' + c.rainChance + '% rain' : '') + '</div>';
 }
 
+function renderMini(data, showTitle) {
+  var c = data.current;
+  return '<span class="mw-mini">' + iconSvg(c.icon, 30) +
+    '<span class="mw-mtemp">' + c.temp + '°</span>' +
+    (showTitle ? '<span class="mw-mloc">' + esc(data.location.name) + '</span>' : '') +
+    '</span>';
+}
+
+// Resolve the click-through URL. Mini badge links by default; other views only
+// link when data-link is set. data-link="false" disables; "true"/"" uses default.
+function resolveLink(el, isMini) {
+  var v = el.getAttribute('data-link');
+  if (v === null) return isMini ? MW_DEFAULT_LINK : null;
+  if (/^(false|0|no|off)$/i.test(v)) return null;
+  if (v === '' || /^(true|1|yes|on)$/i.test(v)) return MW_DEFAULT_LINK;
+  return v;
+}
+
 function renderInto(el, data) {
   var days = intAttr(el.getAttribute('data-days'), 3);
   var hours = intAttr(el.getAttribute('data-hours'), 0);
   var showRain = boolAttr(el.getAttribute('data-rain'), true);
   var showTitle = boolAttr(el.getAttribute('data-title'), true);
   var view = (el.getAttribute('data-view') || '').toLowerCase();
+  var isMini = view === 'mini' || view === 'badge';
+  var link = resolveLink(el, isMini);
+
+  // Mini badge: compact, no card wrapper.
+  if (isMini) {
+    el.className = (el.className ? el.className + ' ' : '') + 'mw-wrap';
+    var mini = renderMini(data, showTitle);
+    el.innerHTML = link ? '<a class="mw-link" href="' + esc(link) + '">' + mini + '</a>' : mini;
+    return;
+  }
 
   var body = '';
   if (view === 'current') {
@@ -144,7 +179,7 @@ function renderInto(el, data) {
       '<div class="mw-sub">Updated ' + esc(data.updatedLabel) + ' · weather.gov</div>'
     : '';
   el.className = (el.className ? el.className + ' ' : '') + 'mw-root';
-  el.innerHTML = head + body;
+  el.innerHTML = link ? '<a class="mw-link" href="' + esc(link) + '">' + head + body + '</a>' : head + body;
 }
 
 function targets() {
@@ -153,7 +188,7 @@ function targets() {
   if (SCRIPT && (SCRIPT.hasAttribute('data-days') || SCRIPT.hasAttribute('data-view') ||
       SCRIPT.hasAttribute('data-hours') || SCRIPT.hasAttribute('data-medora-weather'))) {
     var host = document.createElement('div');
-    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title'].forEach(function (a) {
+    ['data-view', 'data-days', 'data-hours', 'data-rain', 'data-title', 'data-link'].forEach(function (a) {
       if (SCRIPT.hasAttribute(a)) host.setAttribute(a, SCRIPT.getAttribute(a));
     });
     SCRIPT.parentNode.insertBefore(host, SCRIPT.nextSibling);
