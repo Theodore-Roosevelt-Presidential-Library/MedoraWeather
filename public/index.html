@@ -54,7 +54,7 @@
 <div class="wrap">
   <h1>Medora Weather</h1>
   <p class="lead">Copy-and-paste weather widgets and images for Medora, North Dakota.</p>
-  <p class="fine">Powered by the National Weather Service (with air quality from Open-Meteo) and cached — the source refreshes about every 15 minutes, so this page and every site that embeds it never overloads the government API. Each snippet below is ready to paste as-is.</p>
+  <p class="fine">Powered by the National Weather Service (with air quality from Open-Meteo) and cached — the source refreshes about every 30 minutes, so this page and every site that embeds it never overloads the government API. Each snippet below is ready to paste as-is.</p>
 
   <div class="toc">
     <strong style="text-transform:uppercase;letter-spacing:.5px;font-size:12px;color:var(--muted)">Jump to</strong>
@@ -197,12 +197,12 @@
       <tr><td><code>data-refresh</code></td><td>minutes</td><td><code>15</code></td><td>Auto-refresh interval. The widget re-checks for fresh data on this cadence (and when a hidden tab returns), and automatically speeds up to every 5 minutes while an alert is active. Set <code>0</code> to disable.</td></tr>
     </tbody>
   </table>
-  <p class="fine">Widgets update themselves — a page left open refreshes automatically as new data publishes (the source rebuilds about every 15 minutes), no reload needed, and polls faster while a weather alert is active.</p>
+  <p class="fine">Widgets update themselves — a page left open refreshes automatically as new data publishes (the source rebuilds about every 30 minutes), no reload needed, and polls faster while a weather alert is active.</p>
   <p class="fine">Snowfall shows automatically: when the forecast calls for accumulation, the daily cards and hourly strip add a snowflake with the expected inches. Nothing appears when no snow is expected, so it stays out of the way spring through fall.</p>
   <p class="fine">The widgets have transparent backgrounds, so they take on your page's background — the static images always render on white. And if the National Weather Service is ever unreachable, the widgets keep showing the last good forecast and quietly note "data delayed" rather than going blank.</p>
 
   <h2 id="images">Static images</h2>
-  <p>Prefer a plain image — for email, print signage, a CMS that blocks scripts, or a social post? Hotlink any of these PNGs. They refresh hourly at the same URL, so the link never goes stale.</p>
+  <p>Prefer a plain image — for email, print signage, a CMS that blocks scripts, or a social post? Hotlink any of these PNGs. They refresh about every 30 minutes at the same URL, so the link never goes stale.</p>
 
   <div class="imgrow">
     <img src="images/badge.png" alt="Current temperature in Medora" style="max-width:200px" />
@@ -293,7 +293,7 @@
   </div>
   <div class="preview" style="justify-content:flex-start"><div id="preview"></div></div>
 
-  <p class="foot">Theodore Roosevelt Presidential Library · weather data © NOAA / National Weather Service · updated hourly via GitHub Actions.</p>
+  <p class="foot">Theodore Roosevelt Presidential Library · weather data © NOAA / National Weather Service · updated about every 30 minutes via GitHub Actions.</p>
 </div>
 
 <script src="embed.js"></script>

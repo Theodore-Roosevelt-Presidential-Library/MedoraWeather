@@ -2,7 +2,7 @@
 
 An embeddable weather **widget** and auto-updating **static images** for Medora, North Dakota, built for the Theodore Roosevelt Presidential Library.
 
-Data comes from the National Weather Service and is cached and refreshed about every 15 minutes by a GitHub Action. Only that Action ever calls `api.weather.gov` — the widget and images are served as static files from GitHub Pages, so no amount of visitor traffic touches the government API.
+Data comes from the National Weather Service and is cached and refreshed about every 30 minutes by a GitHub Action. Only that Action ever calls `api.weather.gov` — the widget and images are served as static files from GitHub Pages, so no amount of visitor traffic touches the government API.
 
 ## What it produces
 
@@ -72,7 +72,7 @@ The `mini` view is a compact icon + temperature badge that links through to
 
 ## Using the static images
 
-Hotlink any PNG; it refreshes at the same URL about every 15 minutes and always
+Hotlink any PNG; it refreshes at the same URL about every 30 minutes and always
 renders on a white background (unlike the widgets, which are transparent):
 
 ```html
@@ -136,7 +136,7 @@ npm run serve     # preview at http://localhost:8080
 
 ## Deployment
 
-The workflow in `.github/workflows/deploy.yml` runs about every 15 minutes (and on push /
+The workflow in `.github/workflows/deploy.yml` runs about every 30 minutes (and on push /
 manual trigger), builds `site/`, and deploys it to Pages. Scheduled runs can drift
 a few minutes under GitHub load, so treat the cadence as best-effort — this is an
 ambient display, not a life-safety alerting channel.
