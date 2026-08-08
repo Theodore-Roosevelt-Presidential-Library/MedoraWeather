@@ -1,0 +1,149 @@
+name: Watchdog — published feed freshness
+
+# Deliberately independent of deploy.yml. It judges the pipeline only by what
+# is actually published at the public URL, so it cannot be fooled by the
+# pipeline's internal state.
+#
+# This exists because of the Aug 2026 outage: run #681 sat in "Waiting" for
+# 1d22h holding the `pages` concurrency lock. Nothing inside deploy.yml could
+# report that — `timeout-minutes` does not apply to a job that never starts,
+# and a failure-notification job never fires on a run that never finishes.
+# Two days of frozen weather data went unnoticed. An outside observer that
+# only looks at the published artifact catches every version of this.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+# No `pages` group, no environment, no dependency on the deploy workflow —
+# nothing here can be blocked by a stuck deploy. cancel-in-progress is safe
+# because the check is idempotent, and it means the watchdog can never form
+# the same queue that jammed deploy.yml.
+concurrency:
+  group: watchdog
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the published feed
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          # Derive both the URL and the threshold from config.json so this
+          # never drifts out of sync with the real refresh cadence.
+          base=$(jq -r '.site.baseUrl' config.json)
+          refresh=$(jq -r '.cache.refreshMinutes' config.json)
+          feed="${base%/}/data/meta.json"
+
+          # Four missed refreshes before crying wolf, floored at 60 minutes.
+          # GitHub's scheduled runs are best-effort and routinely drift 10-15
+          # minutes under load, so a tighter window produces false alarms.
+          threshold=$(( refresh * 4 ))
+          [ "$threshold" -lt 60 ] && threshold=60
+
+          echo "feed=$feed threshold=${threshold}m"
+
+          status=healthy
+          detail=""
+
+          if ! body=$(curl -fsSL --max-time 30 "$feed" 2>/dev/null); then
+            status=unreachable
+            detail="\`$feed\` could not be fetched. The site itself may be down, not just stale."
+          else
+            generated=$(printf '%s' "$body" | jq -r '.generatedAt // empty')
+            if [ -z "$generated" ]; then
+              status=malformed
+              detail="Feed fetched but contains no \`generatedAt\` field. A build may have published a truncated file."
+            else
+              age=$(( ( $(date -u +%s) - $(date -u -d "$generated" +%s) ) / 60 ))
+              if [ "$age" -gt "$threshold" ]; then
+                status=stale
+                detail="Published data is **${age} minutes old** (threshold ${threshold}m). Last generated \`${generated}\`."
+              else
+                detail="Published data is ${age} minutes old (threshold ${threshold}m)."
+              fi
+            fi
+          fi
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "detail<<WATCHDOG_EOF"
+            echo "$detail"
+            echo "WATCHDOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "### Watchdog: \`$status\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "$detail" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or resolve the alert issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          STATUS: ${{ steps.check.outputs.status }}
+          DETAIL: ${{ steps.check.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTIONS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/deploy.yml
+        run: |
+          set -euo pipefail
+
+          existing=$(gh issue list --repo "$REPO" --label feed-stale --state open \
+            --json number --jq '.[0].number // empty')
+
+          if [ "$STATUS" = "healthy" ]; then
+            # Self-resolving: close the alert once the feed recovers.
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --repo "$REPO" \
+                --body "Recovered. $DETAIL"$'\n\n'"Closing automatically."
+              gh issue close "$existing" --repo "$REPO"
+            fi
+            exit 0
+          fi
+
+          # Already reported — stay quiet rather than commenting every hour.
+          if [ -n "$existing" ]; then
+            echo "Alert issue #$existing already open; not duplicating."
+            exit 0
+          fi
+
+          body=$(printf '%s\n' \
+            "The published Medora Weather feed is not updating." \
+            "" \
+            "**Status:** \`$STATUS\`" \
+            "" \
+            "$DETAIL" \
+            "" \
+            "Watchdog run: $RUN_URL" \
+            "Deploy history: $ACTIONS_URL" \
+            "" \
+            "---" \
+            "" \
+            "Embedded widgets keep serving the last good forecast and show a" \
+            "\"data delayed\" note, so nothing on trlibrary.com goes blank — but" \
+            "the weather shown is frozen until this clears." \
+            "" \
+            "**First thing to check:** open the deploy history and look for a run" \
+            "stuck in **Waiting** or **Queued**. A single stalled run holds the" \
+            "\`pages\` concurrency lock and every later run cancels against it." \
+            "Cancelling the stuck run releases the queue." \
+            "" \
+            "This issue closes itself once the feed is fresh again.")
+
+          gh label create feed-stale --repo "$REPO" --color B60205 \
+            --description "Published weather feed is stale or unreachable" 2>/dev/null || true
+
+          gh issue create --repo "$REPO" --label feed-stale \
+            --title "Medora Weather feed is not updating" --body "$body"
