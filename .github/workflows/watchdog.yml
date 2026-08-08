@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
   issues: write
+  # Needed to cancel stalled runs and re-dispatch the deploy. Scoped to this
+  # repo's Actions only. See the remediation step for the guardrails on what
+  # it is allowed to touch.
+  actions: write
 
 # No `pages` group, no environment, no dependency on the deploy workflow —
 # nothing here can be blocked by a stuck deploy. cancel-in-progress is safe
@@ -89,12 +93,91 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "$detail" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Clear stalled runs and restart the pipeline
+        id: heal
+        if: ${{ steps.check.outputs.status != 'healthy' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # A deploy takes ~4 minutes. Anything that has not started after 45
+          # is not going to; that is dead weight holding the `pages` lock.
+          STALL_MINUTES: "45"
+        run: |
+          set -uo pipefail
+          log=""
+
+          # GUARDRAILS — this step may only ever:
+          #   * touch runs of deploy.yml (never another workflow)
+          #   * touch runs in `queued` or `waiting` (never `in_progress`, so a
+          #     genuinely executing build is never interrupted)
+          #   * touch runs older than STALL_MINUTES
+          # A run matching all three is, by definition, doing no work.
+          for state in queued waiting; do
+            ids=$(gh run list --repo "$REPO" --workflow deploy.yml \
+                    --status "$state" --limit 50 \
+                    --json databaseId,createdAt \
+                    --jq '.[] | "\(.databaseId) \(.createdAt)"' 2>/dev/null || true)
+            [ -z "$ids" ] && continue
+
+            while read -r id created; do
+              [ -z "${id:-}" ] && continue
+              age=$(( ( $(date -u +%s) - $(date -u -d "$created" +%s) ) / 60 ))
+              if [ "$age" -le "$STALL_MINUTES" ]; then
+                echo "run $id is $state for ${age}m — under threshold, leaving alone"
+                continue
+              fi
+
+              echo "run $id stalled in $state for ${age}m — cancelling"
+              gh run cancel "$id" --repo "$REPO" >/dev/null 2>&1 || true
+              sleep 10
+
+              # A normal cancel does not always take on an orphaned run.
+              still=$(gh run view "$id" --repo "$REPO" --json status \
+                        --jq .status 2>/dev/null || echo unknown)
+              if [ "$still" != "completed" ]; then
+                echo "run $id did not cancel cleanly (status=$still) — force-cancelling"
+                gh api -X POST "repos/$REPO/actions/runs/$id/force-cancel" \
+                  >/dev/null 2>&1 || true
+                log="${log}- Force-cancelled run \`#${id}\`, stalled in \`${state}\` for ${age} minutes."$'\n'
+              else
+                log="${log}- Cancelled run \`#${id}\`, stalled in \`${state}\` for ${age} minutes."$'\n'
+              fi
+            done <<< "$ids"
+          done
+
+          # Only start a fresh build if nothing is genuinely running, so the
+          # watchdog can never pile dispatches on top of a working pipeline.
+          running=$(gh run list --repo "$REPO" --workflow deploy.yml \
+                      --status in_progress --limit 1 --json databaseId \
+                      --jq 'length' 2>/dev/null || echo 0)
+          if [ "$running" -eq 0 ]; then
+            if gh workflow run deploy.yml --repo "$REPO" --ref main >/dev/null 2>&1; then
+              log="${log}- Dispatched a fresh deploy run."$'\n'
+            else
+              log="${log}- Could not dispatch a deploy run; needs a look."$'\n'
+            fi
+          else
+            log="${log}- A deploy is already in progress; did not dispatch another."$'\n'
+          fi
+
+          [ -z "$log" ] && log="- No stalled runs found to clear."$'\n'
+
+          {
+            echo "actions<<HEAL_EOF"
+            printf '%s' "$log"
+            echo "HEAL_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "### Remediation" >> "$GITHUB_STEP_SUMMARY"
+          printf '%s' "$log" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Open or resolve the alert issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           STATUS: ${{ steps.check.outputs.status }}
           DETAIL: ${{ steps.check.outputs.detail }}
+          HEAL_LOG: ${{ steps.heal.outputs.actions }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ACTIONS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/deploy.yml
         run: |
@@ -126,6 +209,14 @@ jobs:
             "" \
             "$DETAIL" \
             "" \
+            "### Already attempted automatically" \
+            "" \
+            "$HEAL_LOG" \
+            "" \
+            "If that cleared it, the next watchdog pass closes this issue on its" \
+            "own and no action is needed. This issue exists so the repair is" \
+            "never silent." \
+            "" \
             "Watchdog run: $RUN_URL" \
             "Deploy history: $ACTIONS_URL" \
             "" \
@@ -135,10 +226,10 @@ jobs:
             "\"data delayed\" note, so nothing on trlibrary.com goes blank — but" \
             "the weather shown is frozen until this clears." \
             "" \
-            "**First thing to check:** open the deploy history and look for a run" \
-            "stuck in **Waiting** or **Queued**. A single stalled run holds the" \
-            "\`pages\` concurrency lock and every later run cancels against it." \
-            "Cancelling the stuck run releases the queue." \
+            "**If it is still stale on the next pass**, the jam is something the" \
+            "watchdog cannot clear on its own. Open the deploy history and check" \
+            "whether runs are failing to acquire a runner, or whether the" \
+            "\`github-pages\` environment is gating deployments." \
             "" \
             "This issue closes itself once the feed is fresh again.")
 
